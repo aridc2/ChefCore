@@ -59,12 +59,14 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Esta es la librería mágica de Google para el OCR
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
     implementation("com.google.mlkit:text-recognition:16.0.0")
 
-    // 👇 AÑADIDO: Librerías de la Base de Datos Room 👇
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
+    
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version") // Para usar Kotlin Coroutines
-    kapt("androidx.room:room-compiler:$room_version")      // El motor que genera la base de datos
+    implementation("androidx.room:room-ktx:$room_version")
+    kapt("androidx.room:room-compiler:$room_version")
 }

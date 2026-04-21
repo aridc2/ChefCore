@@ -5,15 +5,15 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-// Si en el futuro añades "Receta" o "Albaran", los pondrás aquí dentro de 'entities'
 @Database(
     entities = [
         Ingrediente::class,
         Usuario::class,
         Receta::class,
-        Albaran::class
+        Albaran::class,
+        RecetaIngrediente::class // <--- NUEVA TABLA AÑADIDA AQUÍ
     ],
-    version = 2,
+    version = 3, // <--- SUBIMOS LA VERSIÓN A 3
     exportSchema = false
 )
 abstract class ChefCoreDatabase : RoomDatabase() {
@@ -34,8 +34,8 @@ abstract class ChefCoreDatabase : RoomDatabase() {
                     ChefCoreDatabase::class.java,
                     "chefcore_database"
                 )
-                .fallbackToDestructiveMigration()
-                .build()
+                    .fallbackToDestructiveMigration() // Al subir la versión, esto borrará los datos antiguos para aplicar la nueva estructura limpia
+                    .build()
                 INSTANCE = instance
                 instance
             }

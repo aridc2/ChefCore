@@ -8,6 +8,7 @@ data class Receta(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val nombre: String,
-    val tiempoPreparacionMinutos: Int,
-    val instrucciones: String
+    val tiempoPreparacionMinutos: Int = 30,
+    val instrucciones: String = "",
+    val precioVenta: Double = 0.0 // <--- NUEVO: Para calcular el beneficio
 )
