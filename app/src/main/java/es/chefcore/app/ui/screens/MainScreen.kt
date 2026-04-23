@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import es.chefcore.app.data.database.*
-import es.chefcore.app.logic.CocinaManager // <--- NUEVO IMPORT
+import es.chefcore.app.logic.CocinaManager
 import es.chefcore.app.ui.components.*
 
 @Composable
@@ -18,15 +18,16 @@ fun MainScreen(
     albaranes: List<Albaran>,
     textoVoz: String,
     rDao: RecetaDao,
-    iDao: IngredienteDao,         // <--- NUEVO: Recibe el DAO de ingredientes
-    cocinaManager: CocinaManager  // <--- NUEVO: Recibe el motor de cocina
+    iDao: IngredienteDao,
+    cocinaManager: CocinaManager
 ) {
     var pantallaActual by remember { mutableStateOf("LISTA") }
-    var recetaSeleccionada by remember { mutableStateOf("") }
+    var recetaSeleccionadaId by remember { mutableStateOf(0) }
 
     LaunchedEffect(textoVoz) {
         if (textoVoz.startsWith("NAV_DETALLE|")) {
-            recetaSeleccionada = textoVoz.substringAfter("|")
+            val idStr = textoVoz.substringAfter("|")
+            recetaSeleccionadaId = idStr.toIntOrNull() ?: 1
             pantallaActual = "DETALLE"
         }
     }
@@ -50,18 +51,23 @@ fun MainScreen(
                 items(ingredientes) { IngredienteItem(it) }
 
                 item { SectionTitle("📖 Recetas") }
-                items(recetas) { RecetaItem(it) }
+                // ✅ AQUÍ ESTÁ LA SOLUCIÓN: Le pasamos la receta y el onClick correctamente
+                items(recetas) { receta ->
+                    RecetaItem(
+                        receta = receta,
+                        onClick = {
+                            recetaSeleccionadaId = receta.id
+                            pantallaActual = "DETALLE"
+                        }
+                    )
+                }
 
                 item { SectionTitle("📄 Últimos Albaranes") }
                 items(albaranes) { AlbaranItem(it) }
             }
         } else {
-            // --- AQUÍ ESTÁ LA MAGIA DEL RELEVO ---
             RecetaDetailScreen(
-                nombreReceta = recetaSeleccionada,
-                rDao = rDao,
-                iDao = iDao,                 // <--- Se lo pasamos a la pantalla de detalle
-                cocinaManager = cocinaManager, // <--- Se lo pasamos a la pantalla de detalle
+                recetaId = recetaSeleccionadaId,
                 onVolver = { pantallaActual = "LISTA" }
             )
         }

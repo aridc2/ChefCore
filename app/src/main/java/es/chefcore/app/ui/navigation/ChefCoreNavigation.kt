@@ -1,125 +1,112 @@
 package es.chefcore.app.ui.navigation
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.*
-import es.chefcore.app.data.database.*
+import es.chefcore.app.data.database.AlbaranDao
+import es.chefcore.app.data.database.IngredienteDao
+import es.chefcore.app.data.database.RecetaDao
+import es.chefcore.app.data.database.UsuarioDao
 import es.chefcore.app.logic.CocinaManager
-import es.chefcore.app.ui.screens.*
+import es.chefcore.app.ui.screens.CreatePinScreen
+import es.chefcore.app.ui.screens.InventoryScreen
+import es.chefcore.app.ui.screens.PersonalManagementScreen
+import es.chefcore.app.ui.screens.RecipesScreen
+import es.chefcore.app.ui.screens.RegisterRestaurantScreen
 
-// 1. DEFINIMOS LAS RUTAS CON LOS ICONOS DEL FIGMA
-sealed class Ruta(val ruta: String, val titulo: String, val icono: @Composable () -> Unit) {
-    object Personal : Ruta("personal", "Ajustes", { Icon(Icons.Filled.People, contentDescription = "Personal") })
-    object Inventario : Ruta("inventario", "Inventario", { Icon(Icons.Filled.Inventory, contentDescription = "Inventario") })
-    object Recetas : Ruta("recetas", "Recetas", { Icon(Icons.Filled.Book, contentDescription = "Recetas") })
-    object Escaner : Ruta("escaner", "Escáner", { Icon(Icons.Filled.QrCodeScanner, contentDescription = "Escáner") })
-
-    // Rutas ocultas de la barra
-    object DetalleReceta : Ruta("receta_detalle/{nombre}", "Detalle", { }) {
-        fun crearRuta(nombre: String) = "receta_detalle/$nombre"
-    }
+sealed class ChefCoreRoute {
+    object Register : ChefCoreRoute()
+    object Login : ChefCoreRoute()
+    object CreatePin : ChefCoreRoute()
+    object Inventory : ChefCoreRoute()
+    object PersonalManagement : ChefCoreRoute()
+    object Recipes : ChefCoreRoute()
+    object Settings : ChefCoreRoute()
+    object Scanner : ChefCoreRoute()
 }
 
 @Composable
-fun ChefCoreAppNavigation(
+fun ChefCoreNavigation(
     iDao: IngredienteDao,
     rDao: RecetaDao,
     aDao: AlbaranDao,
     uDao: UsuarioDao,
-    cocinaManager: CocinaManager,
-    textoVoz: String
+    cocinaManager: CocinaManager
 ) {
-    val navController = rememberNavController()
-    // Orden de los botones según tu Figma
-    val items = listOf(Ruta.Personal, Ruta.Inventario, Ruta.Recetas, Ruta.Escaner)
+    var currentRoute by remember { mutableStateOf<ChefCoreRoute>(ChefCoreRoute.Register) }
 
-    // Escuchador del VoiceCommander para saltar de pantalla por voz
-    LaunchedEffect(textoVoz) {
-        if (textoVoz.startsWith("NAV_DETALLE|")) {
-            val nombre = textoVoz.substringAfter("|")
-            navController.navigate(Ruta.DetalleReceta.crearRuta(nombre))
+    when (currentRoute) {
+
+        is ChefCoreRoute.Register -> {
+            RegisterRestaurantScreen(
+                onRegisterSuccess = { currentRoute = ChefCoreRoute.CreatePin },
+                onNavigateToLogin = { currentRoute = ChefCoreRoute.Login }
+            )
         }
-    }
 
-    // ESTRUCTURA BASE: Fila con Barra Lateral + Contenido
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Row(modifier = Modifier.fillMaxSize()) {
+        is ChefCoreRoute.Login -> {
+            RegisterRestaurantScreen(
+                onRegisterSuccess = { currentRoute = ChefCoreRoute.CreatePin },
+                onNavigateToLogin = { }
+            )
+        }
 
-            // --- BARRA LATERAL (NAVIGATION RAIL) ---
-            val rutaActual = navController.currentBackStackEntryAsState().value?.destination?.route
+        is ChefCoreRoute.CreatePin -> {
+            CreatePinScreen(
+                onPinCreated = { currentRoute = ChefCoreRoute.Inventory }
+            )
+        }
 
-            NavigationRail(
-                modifier = Modifier.width(100.dp), // Ancho de la barra según Figma
-                containerColor = Color.White,
-                header = {
-                    // Aquí podrías poner el logo de ChefCore si quieres
-                    Spacer(modifier = Modifier.height(32.dp))
-                }
-            ) {
-                items.forEach { pantalla ->
-                    val seleccionado = rutaActual == pantalla.ruta
-                    NavigationRailItem(
-                        icon = pantalla.icono,
-                        label = { Text(pantalla.titulo) },
-                        selected = seleccionado,
-                        onClick = {
-                            navController.navigate(pantalla.ruta) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationRailItemDefaults.colors(
-                            selectedIconColor = Color(0xFF2E7D32), // Verde Corporativo [cite: 534]
-                            selectedTextColor = Color(0xFF2E7D32),
-                            unselectedIconColor = Color(0xFF6B7280), // Gris
-                            unselectedTextColor = Color(0xFF6B7280),
-                            indicatorColor = Color(0xFFE8F5E9) // Fondo verde clarito al seleccionar
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+        is ChefCoreRoute.Inventory -> {
+            InventoryScreen(
+                iDao = iDao,
+                cocinaManager = cocinaManager,
+                onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
+                onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
+                onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
+                onScannerClick = { currentRoute = ChefCoreRoute.Scanner }
+            )
+        }
+
+        is ChefCoreRoute.PersonalManagement -> {
+            PersonalManagementScreen(
+                uDao = uDao,
+                onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
+                onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
+                onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
+                onScannerClick = { currentRoute = ChefCoreRoute.Scanner }
+            )
+        }
+
+        is ChefCoreRoute.Recipes -> {
+            RecipesScreen(
+                rDao = rDao,
+                iDao = iDao,
+                cocinaManager = cocinaManager,
+                onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
+                onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
+                onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
+                onScannerClick = { currentRoute = ChefCoreRoute.Scanner }
+            )
+        }
+
+        is ChefCoreRoute.Settings -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Ajustes — Próximamente", style = MaterialTheme.typography.headlineMedium)
             }
+        }
 
-            // Separador visual entre la barra y el contenido
-            VerticalDivider(color = Color.LightGray, thickness = 1.dp)
-
-            // --- CONTENIDO DE LAS PANTALLAS ---
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                NavHost(
-                    navController = navController,
-                    startDestination = Ruta.Inventario.ruta
-                ) {
-                    composable(Ruta.Inventario.ruta) {
-                        InventarioScreen(iDao = iDao, cocinaManager = cocinaManager)
-                    }
-                    composable(Ruta.Recetas.ruta) {
-                        RecetasScreen(rDao = rDao, navController = navController)
-                    }
-                    // TODO: Las siguientes pantallas las haremos paso a paso
-                    composable(Ruta.Personal.ruta) {
-                        // PersonalScreen(uDao = uDao)
-                    }
-                    composable(Ruta.Escaner.ruta) {
-                        AlbaranesScreen(aDao = aDao, cocinaManager = cocinaManager) // De momento usamos Albaranes aquí
-                    }
-                    composable(Ruta.DetalleReceta.ruta) { backStackEntry ->
-                        val nombreReceta = backStackEntry.arguments?.getString("nombre") ?: ""
-                        RecetaDetailScreen(
-                            nombreReceta = nombreReceta, rDao = rDao, iDao = iDao,
-                            cocinaManager = cocinaManager, onVolver = { navController.popBackStack() }
-                        )
-                    }
-                }
+        is ChefCoreRoute.Scanner -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Escáner — Próximamente", style = MaterialTheme.typography.headlineMedium)
             }
         }
     }

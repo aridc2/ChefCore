@@ -12,10 +12,10 @@ interface IngredienteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertar(ingrediente: Ingrediente)
 
-    @Update // <--- Necesario para actualizar el stock
+    @Update  // <--- ESTO FALTABA
     suspend fun actualizar(ingrediente: Ingrediente)
 
-    @Query("SELECT * FROM ingredientes WHERE nombre = :nombre LIMIT 1") // <--- Busca si ya existe
+    @Query("SELECT * FROM ingredientes WHERE nombre = :nombre LIMIT 1")
     suspend fun buscarPorNombre(nombre: String): Ingrediente?
 
     @Query("SELECT * FROM ingredientes")

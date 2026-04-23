@@ -1,5 +1,6 @@
 package es.chefcore.app.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,12 +25,18 @@ fun IngredienteItem(item: Ingrediente) {
     }
 }
 
+// ✅ AQUÍ ESTÁ EL CAMBIO: Ahora recibe 'receta' y 'onClick', y es 'clickable'
 @Composable
-fun RecetaItem(item: Receta) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+fun RecetaItem(receta: Receta, onClick: () -> Unit) {
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable { onClick() } // Esto hace que la tarjeta reaccione al toque
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(item.nombre, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary)
-            Text("Tiempo: ${item.tiempoPreparacionMinutos} min", style = MaterialTheme.typography.bodySmall)
+            Text(receta.nombre, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary)
+            Text("Tiempo: ${receta.tiempoPreparacionMinutos} min", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
