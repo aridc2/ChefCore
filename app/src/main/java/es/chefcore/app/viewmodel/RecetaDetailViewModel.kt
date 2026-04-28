@@ -24,7 +24,6 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
-    // Ingredientes en la receta (escandallo)
     val ingredientesEnReceta: StateFlow<List<IngredienteEnReceta>> = _recetaId
         .filterNotNull()
         .flatMapLatest { id ->
@@ -32,18 +31,15 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // Todos los ingredientes disponibles
     val ingredientesDisponibles: StateFlow<List<Ingrediente>> = ingredienteDao.obtenerTodos()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // Coste total de producción calculado
     val costeTotalProduccion: StateFlow<Double> = ingredientesEnReceta
         .map { lista ->
             lista.sumOf { it.costeTotal }
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, 0.0)
 
-    // Estado interno de la receta (para tener acceso síncrono)
     private var recetaActual: Receta? = null
 
     /**

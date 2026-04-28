@@ -59,6 +59,15 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+    // CameraX
+    val camerax_version = "1.3.1"
+    implementation("androidx.camera:camera-core:${camerax_version}")
+    implementation("androidx.camera:camera-camera2:${camerax_version}")
+    implementation("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation("androidx.camera:camera-view:${camerax_version}")
+
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
     implementation("com.google.mlkit:text-recognition:16.0.0")

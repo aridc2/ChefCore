@@ -1,5 +1,6 @@
 package es.chefcore.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,26 +12,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import es.chefcore.app.ui.components.*
 import es.chefcore.app.ui.theme.ChefCoreColors
 import es.chefcore.app.viewmodel.RecetaDetailViewModel
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecetaDetailScreen(
-    recetaId: Int, // <-- Ahora recibe el ID de la receta
-    onVolver: () -> Unit, // <-- Usamos tu sistema de navegación original
+    recetaId: Int,
+    onVolver: () -> Unit,
+    onEditarReceta: ((Int) -> Unit)? = null,
     viewModel: RecetaDetailViewModel = viewModel()
 ) {
-    // State
+    // Estados del ViewModel
     val receta by viewModel.receta.collectAsState()
     val ingredientesEnReceta by viewModel.ingredientesEnReceta.collectAsState()
     val ingredientesDisponibles by viewModel.ingredientesDisponibles.collectAsState()
     val costeTotalProduccion by viewModel.costeTotalProduccion.collectAsState()
 
+    // Estados locales
     var showSelectorDialog by remember { mutableStateOf(false) }
     var showCantidadDialog by remember { mutableStateOf(false) }
     var ingredienteSeleccionado by remember { mutableStateOf<es.chefcore.app.data.database.Ingrediente?>(null) }
@@ -51,14 +57,26 @@ fun RecetaDetailScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onVolver) { // <-- Aplicado tu onVolver
+                    IconButton(onClick = onVolver) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    if (onEditarReceta != null) {
+                        IconButton(onClick = { onEditarReceta(recetaId) }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Editar receta",
+                                tint = Color.White
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = ChefCoreColors.PrimaryGreen,
                     titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
                 )
             )
         },
@@ -81,7 +99,59 @@ fun RecetaDetailScreen(
         ) {
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
-            // Sección: Información básica
+            item {
+                receta?.imagenUri?.takeIf { it.isNotEmpty() }?.let { imageUri ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = receta?.nombre,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                } ?: run {
+                    // Placeholder si no hay imagen
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = ChefCoreColors.SurfaceGray
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = ChefCoreColors.TextMedium
+                                )
+                                Text(
+                                    "Sin imagen",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = ChefCoreColors.TextMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Información básica
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -94,7 +164,49 @@ fun RecetaDetailScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Tiempo: ${receta?.tiempoPreparacionMinutos ?: 0} minutos")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Tiempo
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(
+                                        ChefCoreColors.SurfaceGray,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(12.dp)
+                            ) {
+                                Text("⏱️", style = MaterialTheme.typography.headlineSmall)
+                                Text(
+                                    "${receta?.tiempoPreparacionMinutos ?: 0} min",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+
+                            // Precio de venta
+                            if ((receta?.precioVenta ?: 0.0) > 0) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(
+                                            ChefCoreColors.SurfaceGray,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(12.dp)
+                                ) {
+                                    Text("💰", style = MaterialTheme.typography.headlineSmall)
+                                    Text(
+                                        "${"%.2f".format(receta?.precioVenta)}€",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = ChefCoreColors.PrimaryGreen
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -161,7 +273,6 @@ fun RecetaDetailScreen(
                         ingredienteEnReceta = ingrediente,
                         onEdit = {
                             ingredienteEnRecetaEditando = ingrediente
-                            // Buscar el ingrediente completo
                             val ing = ingredientesDisponibles.find {
                                 it.id == ingrediente.ingredienteId
                             }
@@ -205,13 +316,6 @@ fun RecetaDetailScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            IconButton(onClick = { /* TODO: Editar instrucciones */ }) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = "Editar",
-                                    tint = ChefCoreColors.AccentYellow
-                                )
-                            }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -228,7 +332,7 @@ fun RecetaDetailScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(80.dp)) } // Espacio para FAB
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 

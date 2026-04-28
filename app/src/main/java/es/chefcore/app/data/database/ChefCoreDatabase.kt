@@ -11,9 +11,9 @@ import androidx.room.RoomDatabase
         Usuario::class,
         Receta::class,
         Albaran::class,
-        RecetaIngrediente::class // <--- NUEVA TABLA AÑADIDA AQUÍ
+        RecetaIngrediente::class
     ],
-    version = 3, // <--- SUBIMOS LA VERSIÓN A 3
+    version = 4,
     exportSchema = false
 )
 abstract class ChefCoreDatabase : RoomDatabase() {
@@ -34,7 +34,7 @@ abstract class ChefCoreDatabase : RoomDatabase() {
                     ChefCoreDatabase::class.java,
                     "chefcore_database"
                 )
-                    .fallbackToDestructiveMigration() // Al subir la versión, esto borrará los datos antiguos para aplicar la nueva estructura limpia
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

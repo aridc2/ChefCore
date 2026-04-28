@@ -98,7 +98,6 @@ object UnitConverter {
         precioUnitarioBase: Double,
         unidadBase: String
     ): Double {
-        // Convertir cantidad de receta a unidad base
         val cantidadEnBase = convertir(cantidadNecesaria, unidadReceta, unidadBase)
         
         // Coste = cantidad en base × precio por unidad base

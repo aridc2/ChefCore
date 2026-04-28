@@ -24,10 +24,9 @@ import androidx.room.ForeignKey
 data class RecetaIngrediente(
     val recetaId: Int,
     val ingredienteId: Int,
-    val cantidadNecesaria: Double // Ej: 0.5 (medio kilo para esta receta)
+    val cantidadNecesaria: Double
 )
 
-// CLASE AUXILIAR: No es una tabla, sirve para devolverle a la UI los datos ya cruzados y calculados
 data class IngredienteEnReceta(
     val ingredienteId: Int,
     val nombre: String,
@@ -35,6 +34,5 @@ data class IngredienteEnReceta(
     val unidad: String,
     val precioUnitario: Double
 ) {
-    // Calcula automáticamente lo que te cuesta este ingrediente para esta receta
     val costeTotal: Double get() = cantidadNecesaria * precioUnitario
 }

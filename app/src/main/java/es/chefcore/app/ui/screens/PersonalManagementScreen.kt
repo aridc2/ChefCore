@@ -29,30 +29,29 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import es.chefcore.app.data.database.Usuario
-import es.chefcore.app.data.database.UsuarioDao
+import androidx.lifecycle.viewmodel.compose.viewModel
 import es.chefcore.app.ui.components.EmployeeCard
 import es.chefcore.app.ui.components.Sidebar
 import es.chefcore.app.ui.theme.ChefCoreColors
-import kotlinx.coroutines.launch
+import es.chefcore.app.viewmodel.PersonalManagementViewModel
 
 @Composable
 fun PersonalManagementScreen(
-    uDao: UsuarioDao,
+    viewModel: PersonalManagementViewModel = viewModel(),
     onSettingsClick: () -> Unit,
     onInventoryClick: () -> Unit,
     onRecipesClick: () -> Unit,
     onScannerClick: () -> Unit
 ) {
-    // Datos REALES desde Room
-    val usuarios by uDao.obtenerTodos().collectAsState(initial = emptyList())
-    val scope = rememberCoroutineScope()
+    val usuarios by viewModel.usuarios.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val feedbackMessage by viewModel.feedbackMessage.collectAsState()
+
     var mostrarDialogo by remember { mutableStateOf(false) }
 
     Row(
@@ -168,22 +167,28 @@ fun PersonalManagementScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        scope.launch {
-                            if (nombre.isNotBlank() && rol.isNotBlank() && pin.length == 4) {
-                                uDao.insertar(Usuario(
-                                    nombre = nombre.trim(),
-                                    rol = rol.trim(),
-                                    pin = pin
-                                ))
-                                mostrarDialogo = false
-                            }
-                        }
+                        viewModel.crearEmpleado(nombre, rol, pin)
+                        mostrarDialogo = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ChefCoreColors.PrimaryGreen)
                 ) { Text("Guardar") }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarDialogo = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    // Mostrar error si existe
+    errorMessage?.let { error ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearMessages() },
+            title = { Text("Error") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearMessages() }) {
+                    Text("OK")
+                }
             }
         )
     }

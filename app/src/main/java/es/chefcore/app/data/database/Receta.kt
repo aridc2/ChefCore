@@ -10,5 +10,6 @@ data class Receta(
     val nombre: String,
     val tiempoPreparacionMinutos: Int = 30,
     val instrucciones: String = "",
-    val precioVenta: Double = 0.0 // <--- NUEVO: Para calcular el beneficio
+    val precioVenta: Double = 0.0,
+    val imagenUri: String? = null
 )

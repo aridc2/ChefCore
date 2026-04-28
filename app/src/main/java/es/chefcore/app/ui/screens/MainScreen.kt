@@ -51,7 +51,7 @@ fun MainScreen(
                 items(ingredientes) { IngredienteItem(it) }
 
                 item { SectionTitle("📖 Recetas") }
-                // ✅ AQUÍ ESTÁ LA SOLUCIÓN: Le pasamos la receta y el onClick correctamente
+
                 items(recetas) { receta ->
                     RecetaItem(
                         receta = receta,

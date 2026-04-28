@@ -63,7 +63,6 @@ class CocinaManager(
         if (existente != null) {
             // ========== CASO 1: INGREDIENTE YA EXISTE ==========
             
-            // Verificar compatibilidad de unidades
             if (!UnitConverter.sonCompatibles(existente.unidad, unidad)) {
                 return RegistroStockResult.ErrorIncompatible(
                     ingredienteExistente = existente,
@@ -72,7 +71,6 @@ class CocinaManager(
                 )
             }
 
-            // Convertir cantidad nueva a la unidad base del ingrediente existente
             val cantidadEnUnidadExistente = UnitConverter.convertir(
                 cantidad = cantidad,
                 unidadOrigen = unidad,
@@ -152,7 +150,7 @@ class CocinaManager(
             pvp = precioVenta,
             margen = beneficioPuro,
             porcentajeMargen = margenPorcentaje,
-            esRentable = margenPorcentaje >= 20.0 // Umbral configurable (20% es estándar en restauración)
+            esRentable = margenPorcentaje >= 20.0
         )
     }
     
@@ -214,9 +212,9 @@ sealed class RegistroStockResult {
  * Información de rentabilidad de una receta
  */
 data class RentabilidadReceta(
-    val coste: Double,           // Coste de producción
-    val pvp: Double,             // Precio de venta
-    val margen: Double,          // Ganancia bruta (pvp - coste)
-    val porcentajeMargen: Double,// % de margen sobre PVP
-    val esRentable: Boolean      // true si margen >= 20%
+    val coste: Double,
+    val pvp: Double,
+    val margen: Double,
+    val porcentajeMargen: Double,
+    val esRentable: Boolean
 )

@@ -11,16 +11,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import es.chefcore.app.data.database.AlbaranDao
-import es.chefcore.app.data.database.IngredienteDao
-import es.chefcore.app.data.database.RecetaDao
-import es.chefcore.app.data.database.UsuarioDao
-import es.chefcore.app.logic.CocinaManager
-import es.chefcore.app.ui.screens.CreatePinScreen
-import es.chefcore.app.ui.screens.InventoryScreen
-import es.chefcore.app.ui.screens.PersonalManagementScreen
-import es.chefcore.app.ui.screens.RecipesScreen
-import es.chefcore.app.ui.screens.RegisterRestaurantScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import es.chefcore.app.ui.screens.*
+import es.chefcore.app.viewmodel.RecipesViewModel
 
 sealed class ChefCoreRoute {
     object Register : ChefCoreRoute()
@@ -31,20 +24,15 @@ sealed class ChefCoreRoute {
     object Recipes : ChefCoreRoute()
     object Settings : ChefCoreRoute()
     object Scanner : ChefCoreRoute()
+    object RecipeCreation : ChefCoreRoute()
+    // data class RecipeEdit(val recetaId: Int) : ChefCoreRoute() // ⏳ DESACTIVADO temporalmente
 }
 
 @Composable
-fun ChefCoreNavigation(
-    iDao: IngredienteDao,
-    rDao: RecetaDao,
-    aDao: AlbaranDao,
-    uDao: UsuarioDao,
-    cocinaManager: CocinaManager
-) {
+fun ChefCoreNavigation() {
     var currentRoute by remember { mutableStateOf<ChefCoreRoute>(ChefCoreRoute.Register) }
 
     when (currentRoute) {
-
         is ChefCoreRoute.Register -> {
             RegisterRestaurantScreen(
                 onRegisterSuccess = { currentRoute = ChefCoreRoute.CreatePin },
@@ -60,15 +48,11 @@ fun ChefCoreNavigation(
         }
 
         is ChefCoreRoute.CreatePin -> {
-            CreatePinScreen(
-                onPinCreated = { currentRoute = ChefCoreRoute.Inventory }
-            )
+            CreatePinScreen(onPinCreated = { currentRoute = ChefCoreRoute.Inventory })
         }
 
         is ChefCoreRoute.Inventory -> {
             InventoryScreen(
-                iDao = iDao,
-                cocinaManager = cocinaManager,
                 onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
                 onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
                 onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
@@ -78,7 +62,6 @@ fun ChefCoreNavigation(
 
         is ChefCoreRoute.PersonalManagement -> {
             PersonalManagementScreen(
-                uDao = uDao,
                 onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
                 onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
                 onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
@@ -88,26 +71,70 @@ fun ChefCoreNavigation(
 
         is ChefCoreRoute.Recipes -> {
             RecipesScreen(
-                rDao = rDao,
-                iDao = iDao,
-                cocinaManager = cocinaManager,
                 onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
                 onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
+                onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
+                onScannerClick = { currentRoute = ChefCoreRoute.Scanner },
+                onNavigateToCreate = { currentRoute = ChefCoreRoute.RecipeCreation }
+                // onEditarReceta REMOVIDO temporalmente - se añadirá en Fase 2
+            )
+        }
+
+        is ChefCoreRoute.Settings -> {
+            SettingsScreen(
+                onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
+                onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
                 onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
                 onScannerClick = { currentRoute = ChefCoreRoute.Scanner }
             )
         }
 
-        is ChefCoreRoute.Settings -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Ajustes — Próximamente", style = MaterialTheme.typography.headlineMedium)
-            }
+        is ChefCoreRoute.Scanner -> {
+            EscanerScreen(
+                onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
+                onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
+                onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
+                onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement }
+            )
         }
 
-        is ChefCoreRoute.Scanner -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Escáner — Próximamente", style = MaterialTheme.typography.headlineMedium)
-            }
+        is ChefCoreRoute.RecipeCreation -> {
+            val recipesViewModel: RecipesViewModel = viewModel()
+
+            RecipeCreationScreen(
+                viewModel = recipesViewModel,
+                onSaveRecipe = { name, cost, imageUri, instructions, ingredientesLista ->
+                    recipesViewModel.crearReceta(
+                        nombre = name,
+                        precioVenta = cost,
+                        instrucciones = instructions,
+                        imagenUri = imageUri?.toString(),
+                        ingredientes = ingredientesLista
+                    )
+                    currentRoute = ChefCoreRoute.Recipes
+                },
+                onCancel = { currentRoute = ChefCoreRoute.Recipes },
+                onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
+                onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
+                onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
+                onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
+                onScannerClick = { currentRoute = ChefCoreRoute.Scanner }
+            )
         }
+
+        //  CASO RecipeEdit DESACTIVADO temporalmente
+        // Se activará en Fase 2 cuando RecipeCreationScreen soporte modo edición
+        /*
+        is ChefCoreRoute.RecipeEdit -> {
+            val recipesViewModel: RecipesViewModel = viewModel()
+
+            RecipeCreationScreen(
+                viewModel = recipesViewModel,
+                recetaId = (currentRoute as ChefCoreRoute.RecipeEdit).recetaId,
+                onSaveRecipe = { ... },
+                ...
+            )
+        }
+        */
     }
 }

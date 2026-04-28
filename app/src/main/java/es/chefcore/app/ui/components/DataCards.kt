@@ -25,7 +25,6 @@ fun IngredienteItem(item: Ingrediente) {
     }
 }
 
-// ✅ AQUÍ ESTÁ EL CAMBIO: Ahora recibe 'receta' y 'onClick', y es 'clickable'
 @Composable
 fun RecetaItem(receta: Receta, onClick: () -> Unit) {
     OutlinedCard(
