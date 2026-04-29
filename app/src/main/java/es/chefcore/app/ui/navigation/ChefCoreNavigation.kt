@@ -25,7 +25,7 @@ sealed class ChefCoreRoute {
     object Settings : ChefCoreRoute()
     object Scanner : ChefCoreRoute()
     object RecipeCreation : ChefCoreRoute()
-    // data class RecipeEdit(val recetaId: Int) : ChefCoreRoute() // ⏳ DESACTIVADO temporalmente
+    data class RecipeEdit(val recetaId: Int) : ChefCoreRoute()
 }
 
 @Composable
@@ -75,8 +75,10 @@ fun ChefCoreNavigation() {
                 onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
                 onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
                 onScannerClick = { currentRoute = ChefCoreRoute.Scanner },
-                onNavigateToCreate = { currentRoute = ChefCoreRoute.RecipeCreation }
-                // onEditarReceta REMOVIDO temporalmente - se añadirá en Fase 2
+                onNavigateToCreate = { currentRoute = ChefCoreRoute.RecipeCreation },
+                onNavigateToEdit = { recetaId ->
+                    currentRoute = ChefCoreRoute.RecipeEdit(recetaId)
+                }
             )
         }
 
@@ -103,10 +105,11 @@ fun ChefCoreNavigation() {
 
             RecipeCreationScreen(
                 viewModel = recipesViewModel,
-                onSaveRecipe = { name, cost, imageUri, instructions, ingredientesLista ->
+                onSaveRecipe = { name, cost, tiempo, imageUri, instructions, ingredientesLista ->
                     recipesViewModel.crearReceta(
                         nombre = name,
                         precioVenta = cost,
+                        tiempoPreparacionMinutos = tiempo,
                         instrucciones = instructions,
                         imagenUri = imageUri?.toString(),
                         ingredientes = ingredientesLista
@@ -122,19 +125,32 @@ fun ChefCoreNavigation() {
             )
         }
 
-        //  CASO RecipeEdit DESACTIVADO temporalmente
-        // Se activará en Fase 2 cuando RecipeCreationScreen soporte modo edición
-        /*
         is ChefCoreRoute.RecipeEdit -> {
             val recipesViewModel: RecipesViewModel = viewModel()
+            val recetaId = (currentRoute as ChefCoreRoute.RecipeEdit).recetaId
 
             RecipeCreationScreen(
                 viewModel = recipesViewModel,
-                recetaId = (currentRoute as ChefCoreRoute.RecipeEdit).recetaId,
-                onSaveRecipe = { ... },
-                ...
+                recetaId = recetaId,
+                onSaveRecipe = { name, cost, tiempo, imageUri, instructions, ingredientesLista ->
+                    recipesViewModel.actualizarReceta(
+                        recetaId = recetaId,
+                        nombre = name,
+                        precioVenta = cost,
+                        tiempoPreparacionMinutos = tiempo,
+                        instrucciones = instructions,
+                        imagenUri = imageUri?.toString(),
+                        ingredientes = ingredientesLista
+                    )
+                    currentRoute = ChefCoreRoute.Recipes
+                },
+                onCancel = { currentRoute = ChefCoreRoute.Recipes },
+                onSettingsClick = { currentRoute = ChefCoreRoute.Settings },
+                onInventoryClick = { currentRoute = ChefCoreRoute.Inventory },
+                onRecipesClick = { currentRoute = ChefCoreRoute.Recipes },
+                onPersonalClick = { currentRoute = ChefCoreRoute.PersonalManagement },
+                onScannerClick = { currentRoute = ChefCoreRoute.Scanner }
             )
         }
-        */
     }
 }

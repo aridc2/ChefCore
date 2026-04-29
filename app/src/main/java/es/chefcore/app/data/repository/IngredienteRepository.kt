@@ -46,6 +46,9 @@ class IngredienteRepository(private val ingredienteDao: IngredienteDao) {
         ingredienteDao.actualizar(ingrediente)
     }
 
+    suspend fun eliminar(ing: Ingrediente) = ingredienteDao.eliminar(ing)
+
+
     /**
      * Elimina todos los ingredientes (útil para testing)
      */

@@ -11,35 +11,30 @@ import es.chefcore.app.logic.RegistroStockResult
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel para InventoryScreen
- * Gestiona el estado y lógica de negocio del inventario
- */
+
 class InventoryViewModel(application: Application) : AndroidViewModel(application) {
-    
-    // Repositories
+
     private val database = ChefCoreDatabase.getDatabase(application)
     private val ingredienteRepository = IngredienteRepository(database.ingredienteDao())
     private val cocinaManager = CocinaManager(
         database.ingredienteDao(),
         database.recetaDao()
     )
-    
+
     val ingredientes: StateFlow<List<Ingrediente>> = ingredienteRepository.obtenerTodos()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    
+
     private val _feedbackMessage = MutableStateFlow<String?>(null)
     val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
-    
+
     private val _errorIncompatible = MutableStateFlow<RegistroStockResult.ErrorIncompatible?>(null)
     val errorIncompatible: StateFlow<RegistroStockResult.ErrorIncompatible?> = _errorIncompatible.asStateFlow()
-    
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-    
+
     /**
-     * Añade stock de un ingrediente (SUMA, no reemplaza)
-     * Calcula PMP automáticamente
+     * Añade stock de un ingrediente (calcula PMP)
      */
     fun añadirStock(
         nombre: String,
@@ -49,7 +44,7 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
     ) {
         viewModelScope.launch {
             _isLoading.value = true
-            
+
             when (val resultado = cocinaManager.registrarEntradaStock(
                 nombre, cantidad, unidad, precioTotal
             )) {
@@ -57,7 +52,7 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
                     _feedbackMessage.value = " Nuevo: ${resultado.ingrediente.nombre} " +
                             "(€${"%.2f".format(resultado.ingrediente.precio)}/${resultado.ingrediente.unidad})"
                 }
-                
+
                 is RegistroStockResult.StockActualizado -> {
                     val ing = resultado.ingrediente
                     _feedbackMessage.value = buildString {
@@ -67,47 +62,69 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
                         append("→ €${"%.2f".format(resultado.pmpNuevo)}")
                     }
                 }
-                
+
                 is RegistroStockResult.ErrorIncompatible -> {
                     _errorIncompatible.value = resultado
                     _feedbackMessage.value = null
                 }
-                
+
                 is RegistroStockResult.Error -> {
-                    _feedbackMessage.value = "❌ Error: ${resultado.mensaje}"
+                    _feedbackMessage.value = " ${resultado.mensaje}"
                 }
             }
-            
+
             _isLoading.value = false
         }
     }
-    
-    /**
-     * Elimina un ingrediente
-     */
-    fun eliminarIngrediente(ingrediente: Ingrediente) {
+
+
+    fun actualizarIngrediente(
+        ingrediente: Ingrediente,
+        nuevoNombre: String,
+        nuevaCantidad: Double,
+        nuevoPrecio: Double,
+        nuevaUnidad: String
+    ) {
         viewModelScope.launch {
             try {
-                // Necesitarás añadir método delete al DAO
-                // ingredienteRepository.eliminar(ingrediente)
-                _feedbackMessage.value = "${ingrediente.nombre} eliminado"
+                if (nuevoNombre.isBlank()) {
+                    _feedbackMessage.value = " El nombre no puede estar vacío"
+                    return@launch
+                }
+
+                val actualizado = ingrediente.copy(
+                    nombre = nuevoNombre.trim(),
+                    cantidad = nuevaCantidad,
+                    precio = nuevoPrecio,
+                    unidad = nuevaUnidad
+                )
+
+                ingredienteRepository.actualizar(actualizado)
+                _feedbackMessage.value = " ${actualizado.nombre} actualizado"
             } catch (e: Exception) {
-                _feedbackMessage.value = "❌ Error al eliminar: ${e.message}"
+                _feedbackMessage.value = " Error al actualizar: ${e.message}"
+                e.printStackTrace()
             }
         }
     }
-    
-    /**
-     * Limpia el mensaje de feedback
-     */
+
+    fun eliminarIngrediente(ingrediente: Ingrediente) {
+        viewModelScope.launch {
+            try {
+                ingredienteRepository.eliminar(ingrediente)
+                _feedbackMessage.value = " ${ingrediente.nombre} eliminado"
+            } catch (e: Exception) {
+                _feedbackMessage.value = " Error al eliminar: ${e.message}"
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun clearFeedback() {
         _feedbackMessage.value = null
         _errorIncompatible.value = null
     }
-    
-    /**
-     * Busca ingredientes por nombre (para búsqueda en tiempo real)
-     */
+
     fun buscarIngredientes(query: String): StateFlow<List<Ingrediente>> {
         return ingredientes.map { lista ->
             if (query.isBlank()) {

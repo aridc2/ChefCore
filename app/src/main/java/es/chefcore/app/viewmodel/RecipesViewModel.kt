@@ -13,6 +13,7 @@ import es.chefcore.app.logic.RentabilidadReceta
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+
 class RecipesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = ChefCoreDatabase.getDatabase(application)
@@ -20,7 +21,6 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
     private val ingredienteRepository = IngredienteRepository(database.ingredienteDao())
     private val cocinaManager = CocinaManager(database.ingredienteDao(), database.recetaDao())
 
-    // Inventario disponible para el desplegable de la pantalla de creación
     val ingredientesDisponibles = ingredienteRepository.obtenerTodos()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -40,6 +40,9 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
     private val _recetaSeleccionada = MutableStateFlow<Int?>(null)
     val recetaSeleccionada: StateFlow<Int?> = _recetaSeleccionada.asStateFlow()
 
+    private val _feedbackMessage = MutableStateFlow<String?>(null)
+    val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
+
     init {
         calcularTodasRentabilidades()
     }
@@ -47,21 +50,22 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
     fun actualizarBusqueda(query: String) { _searchQuery.value = query }
     fun seleccionarReceta(recetaId: Int?) { _recetaSeleccionada.value = recetaId }
 
-    /**
-     * ✅ FUNCIÓN ACTUALIZADA: Guarda la receta y su escandallo
-     */
+    fun clearFeedback() { _feedbackMessage.value = null }
+
     fun crearReceta(
         nombre: String,
         precioVenta: Double,
+        tiempoPreparacionMinutos: Int = 30,
         instrucciones: String,
         imagenUri: String?,
-        ingredientes: List<Pair<Int, Double>> // Lista de (ID de ingrediente, Cantidad normalizada)
+        ingredientes: List<Pair<Int, Double>>
     ) {
         viewModelScope.launch {
             try {
                 val nueva = Receta(
                     nombre = nombre.trim().replaceFirstChar { it.uppercase() },
                     precioVenta = precioVenta,
+                    tiempoPreparacionMinutos = tiempoPreparacionMinutos,
                     instrucciones = instrucciones,
                     imagenUri = imagenUri
                 )
@@ -80,12 +84,96 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
                     }
 
                     calcularRentabilidad(recetaCreada.id)
+                    _feedbackMessage.value = " Receta '${nueva.nombre}' creada"
                 }
             } catch (e: Exception) {
+                _feedbackMessage.value = " Error al crear: ${e.message}"
                 e.printStackTrace()
             }
         }
     }
+
+
+    fun actualizarReceta(
+        recetaId: Int,
+        nombre: String,
+        precioVenta: Double,
+        tiempoPreparacionMinutos: Int,
+        instrucciones: String,
+        imagenUri: String?,
+        ingredientes: List<Pair<Int, Double>>
+    ) {
+        viewModelScope.launch {
+            try {
+                val recetaExistente = recetaRepository.buscarPorId(recetaId) ?: return@launch
+
+                val actualizada = recetaExistente.copy(
+                    nombre = nombre.trim().replaceFirstChar { it.uppercase() },
+                    precioVenta = precioVenta,
+                    tiempoPreparacionMinutos = tiempoPreparacionMinutos,
+                    instrucciones = instrucciones,
+                    imagenUri = imagenUri
+                )
+
+                recetaRepository.actualizar(actualizada)
+
+                // Eliminar ingredientes anteriores y añadir los nuevos
+                recetaRepository.eliminarTodosIngredientes(recetaId)
+
+                ingredientes.forEach { (idIng, cant) ->
+                    val relacion = RecetaIngrediente(
+                        recetaId = recetaId,
+                        ingredienteId = idIng,
+                        cantidadNecesaria = cant
+                    )
+                    recetaRepository.añadirIngrediente(relacion)
+                }
+
+                calcularRentabilidad(recetaId)
+                _feedbackMessage.value = " Receta actualizada"
+            } catch (e: Exception) {
+                _feedbackMessage.value = " Error al actualizar: ${e.message}"
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun eliminarReceta(receta: Receta) {
+        viewModelScope.launch {
+            try {
+                // Primero eliminar la asociación con ingredientes
+                recetaRepository.eliminarTodosIngredientes(receta.id)
+
+                // Luego eliminar la receta
+                recetaRepository.eliminar(receta)
+
+                // Quitar de rentabilidades
+                _rentabilidades.value = _rentabilidades.value - receta.id
+
+                // Si era la receta seleccionada, deseleccionar
+                if (_recetaSeleccionada.value == receta.id) {
+                    _recetaSeleccionada.value = null
+                }
+
+                _feedbackMessage.value = " Receta '${receta.nombre}' eliminada"
+            } catch (e: Exception) {
+                _feedbackMessage.value = " Error al eliminar: ${e.message}"
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * Obtiene una receta por ID (para modo edición)
+     */
+    fun obtenerReceta(recetaId: Int): Flow<Receta?> {
+        return database.recetaDao().observarPorId(recetaId)
+    }
+
+    /**
+     * Obtiene los ingredientes de una receta (para modo edición)
+     */
+    fun obtenerIngredientesDeReceta(recetaId: Int) = database.recetaDao().observarIngredientesDeReceta(recetaId)
 
     fun calcularRentabilidad(recetaId: Int) {
         viewModelScope.launch {
