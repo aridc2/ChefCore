@@ -1,5 +1,6 @@
 package es.chefcore.app.ui.screens
 
+import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -27,17 +29,21 @@ import androidx.compose.ui.unit.dp
 import es.chefcore.app.data.database.Ingrediente
 import es.chefcore.app.logic.UnitConverter
 import es.chefcore.app.ui.components.ImageUploadPicker
+import es.chefcore.app.ui.components.InstruccionesStepsInput
 import es.chefcore.app.ui.components.Sidebar
 import es.chefcore.app.ui.theme.ChefCoreColors
 import es.chefcore.app.viewmodel.RecipesViewModel
 import kotlinx.coroutines.flow.first
-
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.delay
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeCreationScreen(
     viewModel: RecipesViewModel,
-    recetaId: Int? = null, // ✅ NUEVO: si no es null, modo edición
+    recetaId: Int? = null,
     onSaveRecipe: (String, Double, Int, Uri?, String, List<Pair<Int, Double>>) -> Unit,
     onCancel: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -48,6 +54,7 @@ fun RecipeCreationScreen(
 ) {
     val inventario by viewModel.ingredientesDisponibles.collectAsState()
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
 
     // Estados básicos
     var name by remember { mutableStateOf("") }
@@ -64,14 +71,14 @@ fun RecipeCreationScreen(
     var cantidadText by remember { mutableStateOf("") }
     var unidadSeleccionada by remember { mutableStateOf("") }
 
-    var isLoading by remember { mutableStateOf(false) }
+
+    var isLoading by remember { mutableStateOf(recetaId != null) }
 
     LaunchedEffect(recetaId) {
         if (recetaId != null) {
-            isLoading = true
-
             try {
-                val receta = viewModel.obtenerReceta(recetaId).first()
+                // 1. Tomamos la receta
+                val receta = viewModel.obtenerReceta(recetaId).firstOrNull()
                 receta?.let {
                     name = it.nombre
                     price = it.precioVenta.toString()
@@ -80,15 +87,26 @@ fun RecipeCreationScreen(
                     instructions = it.instrucciones ?: ""
                 }
 
+                // 2. Tomamos el inventario. Si está vacío porque la app acaba de arrancar, esperamos 150ms.
+                var inventarioActual = viewModel.ingredientesDisponibles.first()
+                if (inventarioActual.isEmpty()) {
+                    delay(150) // Micro pausa de seguridad para no bloquear
+                    inventarioActual = viewModel.ingredientesDisponibles.first()
+                }
+
+                // 3. Tomamos los ingredientes asociados a la receta
                 val ingredientesReceta = viewModel.obtenerIngredientesDeReceta(recetaId).first()
+
+                // 4. Cruzamos los datos para rellenar la UI
                 ingredientesAñadidos = ingredientesReceta.mapNotNull { ingReceta ->
-                    inventario.find { it.id == ingReceta.ingredienteId }?.let { ingrediente ->
+                    inventarioActual.find { it.id == ingReceta.ingredienteId }?.let { ingrediente ->
                         Pair(ingrediente, ingReceta.cantidadNecesaria)
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
+                // Terminamos de cargar
                 isLoading = false
             }
         }
@@ -146,11 +164,14 @@ fun RecipeCreationScreen(
                             onClick = {
                                 val listaParaDb = ingredientesAñadidos.map { Pair(it.first.id, it.second) }
                                 val tiempo = tiempoMinutos.toIntOrNull() ?: 30
+
+                                val uriPermanente = mainImageUri?.let { copiarImagenALocal(context, it) }
+
                                 onSaveRecipe(
                                     name,
                                     price.toDoubleOrNull() ?: 0.0,
                                     tiempo,
-                                    mainImageUri,
+                                    uriPermanente,
                                     instructions,
                                     listaParaDb
                                 )
@@ -218,13 +239,10 @@ fun RecipeCreationScreen(
                             )
                         }
 
-                        OutlinedTextField(
-                            value = instructions,
-                            onValueChange = { instructions = it },
-                            label = { Text("Instrucciones de preparación") },
-                            modifier = Modifier.fillMaxWidth().height(100.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            maxLines = 5
+                        InstruccionesStepsInput(
+                            instrucciones = instructions,
+                            onInstruccionesChange = { instructions = it },
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -425,5 +443,28 @@ fun RecipeCreationScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+    }
+}
+
+// Función auxiliar para copiar la imagen a local
+fun copiarImagenALocal(context: Context, uriOrigen: Uri): Uri? {
+    if (uriOrigen.scheme == "file" || uriOrigen.toString().contains(context.packageName)) {
+        return uriOrigen
+    }
+
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uriOrigen)
+        val file = File(context.filesDir, "receta_${System.currentTimeMillis()}.jpg")
+        val outputStream = FileOutputStream(file)
+
+        inputStream?.copyTo(outputStream)
+
+        inputStream?.close()
+        outputStream.close()
+
+        Uri.fromFile(file)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

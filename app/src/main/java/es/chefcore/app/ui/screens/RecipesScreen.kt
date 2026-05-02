@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.chefcore.app.data.database.Receta
@@ -41,6 +44,7 @@ fun RecipesScreen(
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
 
     // Estados locales
+    val focusManager = LocalFocusManager.current
     var searchQuery by remember { mutableStateOf("") }
     var recetaAEliminar by remember { mutableStateOf<Receta?>(null) }
 
@@ -90,6 +94,7 @@ fun RecipesScreen(
                     .then(if (recetaSeleccionada == null) Modifier.weight(1f) else Modifier.width(400.dp))
                     .fillMaxHeight()
                     .background(color = Color.White)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -99,10 +104,9 @@ fun RecipesScreen(
                     color = ChefCoreColors.TextDark
                 )
 
-                // Botones: Voz + Crear
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     FilledTonalIconButton(
@@ -113,8 +117,8 @@ fun RecipesScreen(
                                 micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                             }
                         },
-                        modifier = Modifier.size(56.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(72.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = if (isListening) ChefCoreColors.ErrorRed
                             else ChefCoreColors.AccentYellow
@@ -124,22 +128,22 @@ fun RecipesScreen(
                             imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
                             contentDescription = if (isListening) "Detener" else "Comandos de voz",
                             tint = if (isListening) Color.White else ChefCoreColors.TextDark,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
                     Button(
                         onClick = onNavigateToCreate,
-                        modifier = Modifier.weight(1f).height(56.dp),
+                        modifier = Modifier.weight(1f).height(72.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ChefCoreColors.PrimaryGreen,
                             contentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Crear")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Nueva Receta")
+                        Icon(Icons.Default.Add, contentDescription = "Crear", modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Nueva Receta", style = MaterialTheme.typography.titleLarge)
                     }
                 }
 
@@ -204,8 +208,8 @@ fun RecipesScreen(
                                 RecetaItemConAcciones(
                                     receta = receta,
                                     onClick = { viewModel.seleccionarReceta(receta.id) },
-                                    onEdit = { onNavigateToEdit(receta.id) }, // ✅ Editar
-                                    onDelete = { recetaAEliminar = receta }   // ✅ Eliminar
+                                    onEdit = { onNavigateToEdit(receta.id) },
+                                    onDelete = { recetaAEliminar = receta }
                                 )
                             }
                         }

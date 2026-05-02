@@ -13,23 +13,22 @@ class CocinaManager(
      * Intenta cocinar una receta.
      * Retorna 'true' si había stock suficiente y se ha descontado.
      * Retorna 'false' si faltan ingredientes en el inventario.
+     * Busca ingredientes por ID (fiable) en lugar de por nombre.
      */
     suspend fun cocinar(recetaId: Int, raciones: Int = 1): Boolean {
         val ingredientesNecesarios = rDao.obtenerIngredientesStatic(recetaId)
 
-        // 1. COMPROBAR STOCK (No cocinamos si falta algo)
+        // 1. COMPROBAR STOCK — si falta algo, no cocinamos nada
         for (ing in ingredientesNecesarios) {
-            val ingredienteBD = iDao.buscarPorNombre(ing.nombre)
-            val stockActual = ingredienteBD?.cantidad ?: 0.0
-
-            if (stockActual < (ing.cantidadNecesaria * raciones)) {
+            val ingredienteBD = iDao.obtenerPorId(ing.ingredienteId) ?: return false
+            if (ingredienteBD.cantidad < (ing.cantidadNecesaria * raciones)) {
                 return false
             }
         }
 
-        // 2. DESCONTAR STOCK (Si llegamos aquí, hay de todo)
+        // 2. DESCONTAR STOCK — solo llegamos aquí si hay suficiente de todo
         for (ing in ingredientesNecesarios) {
-            val ingredienteBD = iDao.buscarPorNombre(ing.nombre)!!
+            val ingredienteBD = iDao.obtenerPorId(ing.ingredienteId) ?: continue
             val nuevoStock = ingredienteBD.cantidad - (ing.cantidadNecesaria * raciones)
             iDao.actualizar(ingredienteBD.copy(cantidad = nuevoStock))
         }
@@ -62,7 +61,7 @@ class CocinaManager(
 
         if (existente != null) {
             // ========== CASO 1: INGREDIENTE YA EXISTE ==========
-            
+
             if (!UnitConverter.sonCompatibles(existente.unidad, unidad)) {
                 return RegistroStockResult.ErrorIncompatible(
                     ingredienteExistente = existente,
@@ -91,19 +90,19 @@ class CocinaManager(
                 cantidad = stockTotal,
                 precio = nuevoPrecioPMP
             )
-            
+
             iDao.actualizar(actualizado)
-            
+
             return RegistroStockResult.StockActualizado(
                 ingrediente = actualizado,
                 cantidadSumada = cantidadEnUnidadExistente,
                 pmpAnterior = existente.precio,
                 pmpNuevo = nuevoPrecioPMP
             )
-            
+
         } else {
             // ========== CASO 2: INGREDIENTE NUEVO ==========
-            
+
             // Normalizar a unidad base
             val unidadBase = UnitConverter.obtenerUnidadBase(unidad)
             val cantidadEnBase = UnitConverter.convertir(cantidad, unidad, unidadBase)
@@ -119,9 +118,9 @@ class CocinaManager(
                 unidad = unidadBase,
                 precio = precioUnitarioBase
             )
-            
+
             iDao.insertar(nuevo)
-            
+
             return RegistroStockResult.NuevoIngrediente(nuevo)
         }
     }
@@ -153,11 +152,8 @@ class CocinaManager(
             esRentable = margenPorcentaje >= 20.0
         )
     }
-    
-    /**
-     * Versión legacy que retorna String (para compatibilidad)
-     * RECOMENDADO: Usar calcularRentabilidad() que retorna RentabilidadReceta
-     */
+
+
     @Deprecated(
         message = "Usa calcularRentabilidad() que retorna RentabilidadReceta",
         replaceWith = ReplaceWith("calcularRentabilidad(recetaId, precioVenta)")
@@ -165,8 +161,8 @@ class CocinaManager(
     suspend fun calcularRentabilidadString(recetaId: Int, precioVenta: Double): String {
         val rentabilidad = calcularRentabilidad(recetaId, precioVenta)
         return "Coste: ${"%.2f".format(rentabilidad.coste)}€ | " +
-               "Beneficio: ${"%.2f".format(rentabilidad.margen)}€ " +
-               "(${"%.2f".format(rentabilidad.porcentajeMargen)}%)"
+                "Beneficio: ${"%.2f".format(rentabilidad.margen)}€ " +
+                "(${"%.2f".format(rentabilidad.porcentajeMargen)}%)"
     }
 }
 
@@ -182,7 +178,7 @@ sealed class RegistroStockResult {
      * Se creó un nuevo ingrediente
      */
     data class NuevoIngrediente(val ingrediente: Ingrediente) : RegistroStockResult()
-    
+
     /**
      * Se sumó cantidad a un ingrediente existente y se recalculó el PMP
      */
@@ -192,7 +188,7 @@ sealed class RegistroStockResult {
         val pmpAnterior: Double,
         val pmpNuevo: Double
     ) : RegistroStockResult()
-    
+
     /**
      * Error: intentaste sumar unidades incompatibles (ej: kg + L)
      */
@@ -201,7 +197,7 @@ sealed class RegistroStockResult {
         val unidadIntentada: String,
         val mensaje: String
     ) : RegistroStockResult()
-    
+
     /**
      * Error genérico (validación fallida)
      */

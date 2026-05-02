@@ -23,6 +23,9 @@ interface IngredienteDao {
     @Query("SELECT * FROM ingredientes WHERE nombre = :nombre LIMIT 1")
     suspend fun buscarPorNombre(nombre: String): Ingrediente?
 
+    @Query("SELECT * FROM ingredientes WHERE id = :id LIMIT 1")
+    suspend fun obtenerPorId(id: Int): Ingrediente?
+
     @Query("SELECT * FROM ingredientes")
     fun obtenerTodos(): Flow<List<Ingrediente>>
 

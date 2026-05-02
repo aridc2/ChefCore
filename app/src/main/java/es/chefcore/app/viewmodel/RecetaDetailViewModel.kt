@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import es.chefcore.app.data.database.*
+import es.chefcore.app.logic.CocinaManager
 import es.chefcore.app.logic.UnitConverter
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -13,6 +14,10 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
     private val database = ChefCoreDatabase.getDatabase(application)
     private val recetaDao = database.recetaDao()
     private val ingredienteDao = database.ingredienteDao()
+    private val cocinaManager = CocinaManager(database.ingredienteDao(), database.recetaDao())
+
+    private val _feedbackMessage = MutableStateFlow<String?>(null)
+    val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
 
     // Estado de la receta actual
     private val _recetaId = MutableStateFlow<Int?>(null)
@@ -114,6 +119,26 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
             recetaDao.actualizar(actualizada)
             recetaActual = actualizada
         }
+    }
+
+    /**
+     * Descuenta ingredientes del inventario al preparar el plato.
+     * Usa CocinaManager.cocinar() que busca por ID y verifica stock antes de descontar.
+     * Si falta stock de cualquier ingrediente no descuenta nada.
+     */
+    fun prepararPlato(recetaId: Int, raciones: Int) {
+        viewModelScope.launch {
+            val exito = cocinaManager.cocinar(recetaId, raciones)
+            _feedbackMessage.value = if (exito) {
+                " Ingredientes descontados para $raciones ración(es)"
+            } else {
+                " Stock insuficiente para preparar $raciones ración(es)"
+            }
+        }
+    }
+
+    fun clearFeedback() {
+        _feedbackMessage.value = null
     }
 
     /**

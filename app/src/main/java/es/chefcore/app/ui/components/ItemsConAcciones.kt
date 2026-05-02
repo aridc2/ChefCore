@@ -22,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import es.chefcore.app.data.database.Ingrediente
 import es.chefcore.app.data.database.Receta
+import es.chefcore.app.logic.UnitConverter
 import es.chefcore.app.ui.theme.ChefCoreColors
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,15 +46,15 @@ fun RecetaItemConAcciones(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Imagen o placeholder
             Box(
                 modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(ChefCoreColors.SurfaceGray),
                 contentAlignment = Alignment.Center
             ) {
@@ -70,7 +70,7 @@ fun RecetaItemConAcciones(
                         Icons.Default.Restaurant,
                         contentDescription = null,
                         tint = ChefCoreColors.TextMedium,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(34.dp)
                     )
                 }
             }
@@ -111,35 +111,44 @@ fun RecetaItemConAcciones(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Botón Editar
+            // Botones de acción GIGANTES
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(
                     onClick = onEdit,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            ChefCoreColors.AccentYellow.copy(alpha = 0.15f),
+                            RoundedCornerShape(12.dp)
+                        )
                 ) {
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = "Editar",
-                        tint = ChefCoreColors.AccentYellow,
-                        modifier = Modifier.size(20.dp)
+                        tint = ChefCoreColors.AccentYellowDark,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            ChefCoreColors.ErrorRed.copy(alpha = 0.1f),
+                            RoundedCornerShape(12.dp)
+                        )
                 ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Eliminar",
                         tint = ChefCoreColors.ErrorRed,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -160,14 +169,14 @@ fun IngredienteItemConAcciones(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(ChefCoreColors.PrimaryGreen.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -175,7 +184,7 @@ fun IngredienteItemConAcciones(
                     Icons.Default.Inventory2,
                     contentDescription = null,
                     tint = ChefCoreColors.PrimaryGreen,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(30.dp)
                 )
             }
 
@@ -195,34 +204,44 @@ fun IngredienteItemConAcciones(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            // Botones de acción GIGANTES
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(
                     onClick = onEdit,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            ChefCoreColors.AccentYellow.copy(alpha = 0.15f),
+                            RoundedCornerShape(12.dp)
+                        )
                 ) {
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = "Editar",
-                        tint = ChefCoreColors.AccentYellow,
-                        modifier = Modifier.size(20.dp)
+                        tint = ChefCoreColors.AccentYellowDark,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            ChefCoreColors.ErrorRed.copy(alpha = 0.1f),
+                            RoundedCornerShape(12.dp)
+                        )
                 ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Eliminar",
                         tint = ChefCoreColors.ErrorRed,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun ConfirmDeleteDialog(
@@ -272,7 +291,6 @@ fun ConfirmDeleteDialog(
     )
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditarIngredienteDialog(
@@ -284,6 +302,11 @@ fun EditarIngredienteDialog(
     var cantidad by remember { mutableStateOf(ingrediente.cantidad.toString()) }
     var precio by remember { mutableStateOf(ingrediente.precio.toString()) }
     var unidad by remember { mutableStateOf(ingrediente.unidad) }
+    var expandedUnidad by remember { mutableStateOf(false) }
+
+    // Unidades compatibles con la unidad actual del ingrediente
+    val unidades = UnitConverter.obtenerUnidadesCompatibles(unidad)
+        .ifEmpty { listOf("kg", "g", "L", "ml", "cl", "ud") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -305,13 +328,33 @@ fun EditarIngredienteDialog(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
-                    OutlinedTextField(
-                        value = unidad,
-                        onValueChange = { unidad = it },
-                        label = { Text("Unidad") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    // Desplegable de unidades compatibles
+                    ExposedDropdownMenuBox(
+                        expanded = expandedUnidad,
+                        onExpandedChange = { expandedUnidad = !expandedUnidad },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = unidad,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Unidad") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUnidad) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedUnidad,
+                            onDismissRequest = { expandedUnidad = false }
+                        ) {
+                            unidades.forEach { u ->
+                                DropdownMenuItem(
+                                    text = { Text(u) },
+                                    onClick = { unidad = u; expandedUnidad = false }
+                                )
+                            }
+                        }
+                    }
                 }
                 OutlinedTextField(
                     value = precio,

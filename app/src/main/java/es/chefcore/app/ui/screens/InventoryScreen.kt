@@ -1,22 +1,31 @@
 package es.chefcore.app.ui.screens
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.chefcore.app.data.database.Ingrediente
+import es.chefcore.app.logic.UnitConverter
 import es.chefcore.app.ui.components.ConfirmDeleteDialog
 import es.chefcore.app.ui.components.EditarIngredienteDialog
 import es.chefcore.app.ui.components.IngredienteItemConAcciones
@@ -37,10 +46,21 @@ fun InventoryScreen(
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
 
     // Estados locales
+    val focusManager = LocalFocusManager.current
     var searchQuery by remember { mutableStateOf("") }
     var mostrarDialogoAñadir by remember { mutableStateOf(false) }
     var ingredienteAEditar by remember { mutableStateOf<Ingrediente?>(null) }
     var ingredienteAEliminar by remember { mutableStateOf<Ingrediente?>(null) }
+
+    // Estados micrófono
+    var isListening by remember { mutableStateOf(false) }
+    var recognizedText by remember { mutableStateOf("") }
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) isListening = true
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -79,6 +99,7 @@ fun InventoryScreen(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(color = Color.White)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -88,19 +109,69 @@ fun InventoryScreen(
                     color = ChefCoreColors.TextDark
                 )
 
-                // Botón añadir
-                Button(
-                    onClick = { mostrarDialogoAñadir = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ChefCoreColors.PrimaryGreen,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Añadir")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Añadir Ingrediente")
+                    FilledTonalIconButton(
+                        onClick = {
+                            if (isListening) {
+                                isListening = false
+                            } else {
+                                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
+                        modifier = Modifier.size(72.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = if (isListening) ChefCoreColors.ErrorRed
+                            else ChefCoreColors.AccentYellow
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                            contentDescription = if (isListening) "Detener" else "Comandos de voz",
+                            tint = if (isListening) Color.White else ChefCoreColors.TextDark,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = { mostrarDialogoAñadir = true },
+                        modifier = Modifier.weight(1f).height(72.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ChefCoreColors.PrimaryGreen,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Añadir", modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Añadir Ingrediente", style = MaterialTheme.typography.titleLarge)
+                    }
+                }
+
+                // Card escuchando
+                if (isListening) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = ChefCoreColors.AccentYellow.copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Mic, contentDescription = null, tint = ChefCoreColors.AccentYellow)
+                            Text(
+                                text = if (recognizedText.isEmpty()) "Escuchando..." else recognizedText,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
                 }
 
                 // Búsqueda
@@ -175,6 +246,7 @@ fun InventoryScreen(
 /**
  * Diálogo para añadir stock
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AñadirStockDialog(
     onDismiss: () -> Unit,
@@ -184,6 +256,9 @@ private fun AñadirStockDialog(
     var cantidad by remember { mutableStateOf("") }
     var unidad by remember { mutableStateOf("kg") }
     var precio by remember { mutableStateOf("") }
+    var expandedUnidad by remember { mutableStateOf(false) }
+
+    val unidades = listOf("kg", "g", "L", "ml", "cl", "ud")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -206,13 +281,33 @@ private fun AñadirStockDialog(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
-                    OutlinedTextField(
-                        value = unidad,
-                        onValueChange = { unidad = it },
-                        label = { Text("Unidad") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    // Desplegable de unidades
+                    ExposedDropdownMenuBox(
+                        expanded = expandedUnidad,
+                        onExpandedChange = { expandedUnidad = !expandedUnidad },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = unidad,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Unidad") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUnidad) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedUnidad,
+                            onDismissRequest = { expandedUnidad = false }
+                        ) {
+                            unidades.forEach { u ->
+                                DropdownMenuItem(
+                                    text = { Text(u) },
+                                    onClick = { unidad = u; expandedUnidad = false }
+                                )
+                            }
+                        }
+                    }
                 }
                 OutlinedTextField(
                     value = precio,

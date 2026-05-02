@@ -1,6 +1,8 @@
 package es.chefcore.app.viewmodel
 
 import android.app.Application
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import es.chefcore.app.data.database.ChefCoreDatabase
@@ -12,7 +14,7 @@ import es.chefcore.app.logic.CocinaManager
 import es.chefcore.app.logic.RentabilidadReceta
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-
+import java.io.File
 
 class RecipesViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -107,6 +109,18 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val recetaExistente = recetaRepository.buscarPorId(recetaId) ?: return@launch
 
+                if (recetaExistente.imagenUri != null && recetaExistente.imagenUri != imagenUri) {
+                    try {
+                        val oldFile = File(Uri.parse(recetaExistente.imagenUri).path ?: "")
+                        if (oldFile.exists()) {
+                            oldFile.delete()
+                            Log.d("ChefCore_Memoria", "¡FOTO BORRADA! Memoria liberada con éxito.")
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
                 val actualizada = recetaExistente.copy(
                     nombre = nombre.trim().replaceFirstChar { it.uppercase() },
                     precioVenta = precioVenta,
@@ -141,6 +155,17 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
     fun eliminarReceta(receta: Receta) {
         viewModelScope.launch {
             try {
+                if (receta.imagenUri != null) {
+                    try {
+                        val file = File(Uri.parse(receta.imagenUri).path ?: "")
+                        if (file.exists()) {
+                            file.delete()
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
                 // Primero eliminar la asociación con ingredientes
                 recetaRepository.eliminarTodosIngredientes(receta.id)
 

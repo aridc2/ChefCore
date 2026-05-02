@@ -4,11 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,12 +44,28 @@ fun RecetaDetailScreen(
     var ingredienteSeleccionado by remember { mutableStateOf<es.chefcore.app.data.database.Ingrediente?>(null) }
     var ingredienteEnRecetaEditando by remember { mutableStateOf<es.chefcore.app.data.database.IngredienteEnReceta?>(null) }
 
+    // Estados Modo Cocina
+    var modoCocinaActivo by remember { mutableStateOf(false) }
+    var showRacionesDialog by remember { mutableStateOf(false) }
+    var raciones by remember { mutableIntStateOf(1) }
+
+    // Snackbar para feedback de prepararPlato
+    val snackbarHostState = remember { SnackbarHostState() }
+    val feedbackMessage by viewModel.feedbackMessage.collectAsState()
+    LaunchedEffect(feedbackMessage) {
+        feedbackMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearFeedback()
+        }
+    }
+
     // Cargar receta
     LaunchedEffect(recetaId) {
         viewModel.cargarReceta(recetaId)
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -62,13 +80,27 @@ fun RecetaDetailScreen(
                     }
                 },
                 actions = {
+                    // Botón Preparar Plato — siempre visible, grande
+                    Button(
+                        onClick = { showRacionesDialog = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = ChefCoreColors.PrimaryGreen
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .height(40.dp)
+                    ) {
+                        Text(
+                            text = "🍳  Preparar",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
                     if (onEditarReceta != null) {
                         IconButton(onClick = { onEditarReceta(recetaId) }) {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = "Editar receta",
-                                tint = Color.White
-                            )
+                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White)
                         }
                     }
                 },
@@ -299,8 +331,16 @@ fun RecetaDetailScreen(
                 }
             }
 
-            // Instrucciones
+            // Instrucciones como pasos numerados + botón Preparar Plato
             item {
+                val pasos = remember(receta?.instrucciones) {
+                    receta?.instrucciones
+                        ?.split("\n")
+                        ?.map { it.trim() }
+                        ?.filter { it.isNotBlank() }
+                        ?: emptyList()
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -312,28 +352,147 @@ fun RecetaDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Instrucciones",
+                                "Instrucciones",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = receta?.instrucciones?.takeIf { it.isNotBlank() }
-                                ?: "Sin instrucciones",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (receta?.instrucciones?.isBlank() != false) {
-                                ChefCoreColors.TextMedium
-                            } else {
-                                ChefCoreColors.TextDark
+                            if (pasos.isNotEmpty()) {
+                                Text(
+                                    "${pasos.size} pasos",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ChefCoreColors.TextMedium
+                                )
                             }
-                        )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (pasos.isEmpty()) {
+                            Text(
+                                "Sin instrucciones",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = ChefCoreColors.TextMedium
+                            )
+                        } else {
+                            pasos.forEachIndexed { index, paso ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(
+                                                ChefCoreColors.PrimaryGreen,
+                                                CircleShape
+                                            )
+                                    ) {
+                                        Text(
+                                            "${index + 1}",
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Text(
+                                        paso,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = ChefCoreColors.TextDark,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (index < pasos.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 40.dp),
+                                        color = ChefCoreColors.SurfaceGray
+                                    )
+                                }
+                            }
+                        }
+
                     }
                 }
             }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
+    }
+
+    // ── DIÁLOGO: ¿Cuántas raciones? ──────────────────────────────────────────
+    if (showRacionesDialog) {
+        AlertDialog(
+            onDismissRequest = { showRacionesDialog = false },
+            title = { Text("¿Cuántas raciones?") },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Los ingredientes se descontarán del inventario.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ChefCoreColors.TextMedium
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(32.dp)
+                    ) {
+                        FilledTonalIconButton(
+                            onClick = { if (raciones > 1) raciones-- },
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Text("−", style = MaterialTheme.typography.headlineSmall)
+                        }
+                        Text(
+                            text = "$raciones",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = ChefCoreColors.PrimaryGreen
+                        )
+                        FilledTonalIconButton(
+                            onClick = { raciones++ },
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Text("+", style = MaterialTheme.typography.headlineSmall)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.prepararPlato(recetaId, raciones)
+                        showRacionesDialog = false
+                        modoCocinaActivo = true
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ChefCoreColors.PrimaryGreen
+                    )
+                ) {
+                    Text("Empezar a cocinar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRacionesDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // ── MODO COCINA: se renderiza encima de todo ──────────────────────────────
+    if (modoCocinaActivo) {
+        ModoCocinaScreen(
+            nombreReceta = receta?.nombre ?: "",
+            instrucciones = receta?.instrucciones ?: "",
+            raciones = raciones,
+            ingredientes = ingredientesEnReceta,
+            onSalir = { modoCocinaActivo = false }
+        )
     }
 
     // Diálogo selector de ingredientes
