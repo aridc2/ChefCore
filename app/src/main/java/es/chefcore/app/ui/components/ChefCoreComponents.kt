@@ -64,31 +64,29 @@ fun Sidebar(
     onInventoryClick: () -> Unit,
     onRecipesClick: () -> Unit,
     onScannerClick: () -> Unit,
-    onPersonalClick: () -> Unit
+    onPersonalClick: () -> Unit,
+    esGerente: Boolean = true
 ) {
     Column(
         modifier = Modifier
-            .width(140.dp)  // Más ancho para botones grandes
+            .width(140.dp)
             .fillMaxHeight()
             .background(color = Color.White)
             .padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Ajustes arriba
         SidebarButton(
             icon = Icons.Default.Settings,
             label = "Ajustes",
             onClick = onSettingsClick
         )
 
-        // Espaciador para empujar los iconos principales hacia el centro
         Spacer(modifier = Modifier.weight(1f))
 
-        // Iconos principales agrupados con más espacio
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)  // Más espacio entre botones
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SidebarButton(
                 icon = painterResource(id = R.drawable.ic_inventory),
@@ -108,15 +106,17 @@ fun Sidebar(
                 onClick = onScannerClick,
                 isActive = currentScreen == "Scanner"
             )
-            SidebarButton(
-                icon = painterResource(id = R.drawable.ic_personal),
-                label = "Personal",
-                onClick = onPersonalClick,
-                isActive = currentScreen == "Personal"
-            )
+            // Personal solo visible para Gerente
+            if (esGerente) {
+                SidebarButton(
+                    icon = painterResource(id = R.drawable.ic_personal),
+                    label = "Personal",
+                    onClick = onPersonalClick,
+                    isActive = currentScreen == "Personal"
+                )
+            }
         }
 
-        // Espaciador inferior
         Spacer(modifier = Modifier.weight(1f))
     }
 }
@@ -172,26 +172,26 @@ fun SidebarButton(
 ) {
     Column(
         modifier = Modifier
-            .width(120.dp)  // Más ancho
+            .width(120.dp)
             .background(
                 color = if (isActive) ChefCoreColors.PrimaryGreen else Color.Transparent,
-                shape = RoundedCornerShape(16.dp)  // Bordes más redondeados
+                shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onClick)
-            .padding(12.dp),  // Más padding
+            .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             painter = icon,
             contentDescription = label,
-            modifier = Modifier.size(48.dp),  // Iconos mucho más grandes
+            modifier = Modifier.size(48.dp),
             tint = if (isActive) Color.White else ChefCoreColors.TextDark
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,  // Texto un poco más grande
+            style = MaterialTheme.typography.labelMedium,
             color = if (isActive) Color.White else ChefCoreColors.TextDark
         )
     }
@@ -307,7 +307,7 @@ fun ChefCoreTextField(
 @Composable
 fun IngredienteCard(
     ingrediente: Ingrediente,
-    userRole: String, // "Gerente" o "Empleado"
+    userRole: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -326,19 +326,16 @@ fun IngredienteCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Columna izquierda: Info del ingrediente
+
             Column(modifier = Modifier.weight(1f)) {
-                // Nombre
                 Text(
                     text = ingrediente.nombre,
                     style = MaterialTheme.typography.titleMedium,
                     color = ChefCoreColors.TextDark,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Stock con UNIDAD
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_inventory),
@@ -362,8 +359,7 @@ fun IngredienteCard(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                
-                // PRECIO - Solo visible para Gerente
+
                 if (userRole == "Gerente") {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -380,7 +376,7 @@ fun IngredienteCard(
                     }
                 }
             }
-            
+
             // Indicador visual de stock bajo (si tienes campo stock_minimo)
             // Descomenta si añades este campo a la entidad
             /*
@@ -456,15 +452,13 @@ fun RecetaCardCompleta(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Nombre de la receta
             Text(
                 text = receta.nombre,
                 style = MaterialTheme.typography.titleLarge,
                 color = ChefCoreColors.TextDark,
                 fontWeight = FontWeight.Bold
             )
-            
-            // Descripción (si existe)
+
             if (!receta.instrucciones.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -475,14 +469,12 @@ fun RecetaCardCompleta(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            
-            // INFORMACIÓN FINANCIERA - Solo para Gerente
+
             if (userRole == "Gerente" && rentabilidad != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Divider(color = ChefCoreColors.SurfaceGray)
                 Spacer(modifier = Modifier.height(12.dp))
-                
-                // Tabla de 3 columnas: Coste | PVP | Ganancia
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -505,8 +497,7 @@ fun RecetaCardCompleta(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
-                    // PVP
+
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.weight(1f)
@@ -524,8 +515,7 @@ fun RecetaCardCompleta(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
-                    // GANANCIA
+
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.weight(1f)
@@ -549,8 +539,7 @@ fun RecetaCardCompleta(
                         )
                     }
                 }
-                
-                // ALERTA si margen bajo
+
                 if (!rentabilidad.esRentable) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(

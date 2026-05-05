@@ -20,7 +20,13 @@ class UsuarioRepository(private val usuarioDao: UsuarioDao) {
         usuarioDao.insertar(usuario)
     }
 
-    // Método útil para login
+    suspend fun actualizar(usuario: Usuario) {
+        usuarioDao.actualizar(usuario)
+    }
+
+    suspend fun eliminar(usuario: Usuario) {
+        usuarioDao.eliminar(usuario)
+    }
     suspend fun validarPin(pin: String): Usuario? {
         return usuarioDao.obtenerTodos().first().find { it.pin == pin }
     }

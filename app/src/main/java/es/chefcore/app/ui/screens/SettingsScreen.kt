@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,10 +42,12 @@ import es.chefcore.app.viewmodel.SettingsViewModel
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
+    esGerente: Boolean = true,
     onInventoryClick: () -> Unit,
     onPersonalClick: () -> Unit,
     onRecipesClick: () -> Unit,
-    onScannerClick: () -> Unit
+    onScannerClick: () -> Unit,
+    onLogout: () -> Unit = {}
 ) {
     // Observar estados del ViewModel
     val currency by viewModel.currency.collectAsState()
@@ -80,7 +83,8 @@ fun SettingsScreen(
             onInventoryClick = onInventoryClick,
             onRecipesClick = onRecipesClick,
             onScannerClick = onScannerClick,
-            onPersonalClick = onPersonalClick
+            onPersonalClick = onPersonalClick,
+            esGerente = esGerente
         )
 
         // Contenido principal
@@ -341,92 +345,6 @@ fun SettingsScreen(
                 }
             )
 
-            // ==================== SECCIÓN 5: DATOS ====================
-            SettingsSection(
-                title = "Datos",
-                icon = Icons.Default.Delete,
-                content = {
-                    // Botón de Borrar Base de Datos
-                    Button(
-                        onClick = { viewModel.setShowDeleteConfirmation(true) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ChefCoreColors.ErrorRed,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Borrar base de datos",
-                            modifier = Modifier.width(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Borrar Base de Datos", style = MaterialTheme.typography.labelLarge)
-                    }
-
-                    if (showDeleteConfirmation) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    color = ChefCoreColors.ErrorRed.copy(alpha = 0.1f),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .padding(12.dp)
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Text(
-                                    text = "⚠️ ¿Estás seguro? Esta acción no se puede deshacer.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = ChefCoreColors.ErrorRed
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = { viewModel.setShowDeleteConfirmation(false) },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(40.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = ChefCoreColors.SurfaceGray,
-                                            contentColor = ChefCoreColors.TextDark
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text("Cancelar")
-                                    }
-                                    Button(
-                                        onClick = {
-                                            viewModel.deleteAllData {
-                                                // Feedback al usuario
-                                            }
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(40.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = ChefCoreColors.ErrorRed,
-                                            contentColor = Color.White
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text("Borrar")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            )
-
             // ==================== SECCIÓN 6: INFORMACIÓN ====================
             SettingsSection(
                 title = "Información",
@@ -444,6 +362,27 @@ fun SettingsScreen(
                     }
                 }
             )
+
+            // ==================== CERRAR SESIÓN ====================
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ChefCoreColors.TextMedium,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Logout,
+                    contentDescription = "Cerrar sesión",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Cerrar sesión", style = MaterialTheme.typography.labelLarge)
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
         }

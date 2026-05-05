@@ -37,6 +37,7 @@ import es.chefcore.app.viewmodel.InventoryViewModel
 @Composable
 fun InventoryScreen(
     viewModel: InventoryViewModel = viewModel(),
+    esGerente: Boolean = true,
     onSettingsClick: () -> Unit,
     onRecipesClick: () -> Unit,
     onPersonalClick: () -> Unit,
@@ -45,14 +46,12 @@ fun InventoryScreen(
     val ingredientes by viewModel.ingredientes.collectAsState()
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
 
-    // Estados locales
     val focusManager = LocalFocusManager.current
     var searchQuery by remember { mutableStateOf("") }
     var mostrarDialogoAñadir by remember { mutableStateOf(false) }
     var ingredienteAEditar by remember { mutableStateOf<Ingrediente?>(null) }
     var ingredienteAEliminar by remember { mutableStateOf<Ingrediente?>(null) }
 
-    // Estados micrófono
     var isListening by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
 
@@ -91,7 +90,8 @@ fun InventoryScreen(
                 onInventoryClick = { },
                 onRecipesClick = onRecipesClick,
                 onScannerClick = onScannerClick,
-                onPersonalClick = onPersonalClick
+                onPersonalClick = onPersonalClick,
+                esGerente = esGerente
             )
 
             Column(
@@ -152,7 +152,6 @@ fun InventoryScreen(
                     }
                 }
 
-                // Card escuchando
                 if (isListening) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -174,7 +173,6 @@ fun InventoryScreen(
                     }
                 }
 
-                // Búsqueda
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -199,6 +197,7 @@ fun InventoryScreen(
                         items(ingredientesFiltrados) { ingrediente ->
                             IngredienteItemConAcciones(
                                 ingrediente = ingrediente,
+                                esGerente = esGerente,
                                 onEdit = { ingredienteAEditar = ingrediente },
                                 onDelete = { ingredienteAEliminar = ingrediente }
                             )
@@ -211,6 +210,7 @@ fun InventoryScreen(
 
     if (mostrarDialogoAñadir) {
         AñadirStockDialog(
+            esGerente = esGerente,
             onDismiss = { mostrarDialogoAñadir = false },
             onConfirm = { nombre, cantidad, unidad, precio ->
                 viewModel.añadirStock(nombre, cantidad, unidad, precio)
@@ -249,6 +249,7 @@ fun InventoryScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AñadirStockDialog(
+    esGerente: Boolean = true,
     onDismiss: () -> Unit,
     onConfirm: (nombre: String, cantidad: Double, unidad: String, precio: Double) -> Unit
 ) {
@@ -281,7 +282,6 @@ private fun AñadirStockDialog(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
-                    // Desplegable de unidades
                     ExposedDropdownMenuBox(
                         expanded = expandedUnidad,
                         onExpandedChange = { expandedUnidad = !expandedUnidad },

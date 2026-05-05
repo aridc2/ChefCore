@@ -2,8 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    // 👇 AÑADIDO: El plugin necesario para que Room funcione
     kotlin("kapt")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -16,7 +16,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -42,7 +41,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -67,15 +65,17 @@ dependencies {
     implementation("androidx.camera:camera-view:${camerax_version}")
 
     implementation("io.coil-kt:coil-compose:2.5.0")
-
     implementation("androidx.navigation:navigation-compose:2.7.7")
-
     implementation("com.google.mlkit:text-recognition:16.0.0")
-
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
-    
+
+    // Room
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     kapt("androidx.room:room-compiler:$room_version")
+
+    // Firebase
+    implementation("com.google.firebase:firebase-auth-ktx:23.2.0")
+    implementation("com.google.firebase:firebase-firestore-ktx:25.1.4")
 }

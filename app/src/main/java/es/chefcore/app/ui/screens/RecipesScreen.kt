@@ -32,6 +32,7 @@ import es.chefcore.app.viewmodel.RecipesViewModel
 @Composable
 fun RecipesScreen(
     viewModel: RecipesViewModel = viewModel(),
+    esGerente: Boolean = true,
     onSettingsClick: () -> Unit,
     onInventoryClick: () -> Unit,
     onPersonalClick: () -> Unit,
@@ -85,10 +86,10 @@ fun RecipesScreen(
                 onInventoryClick = onInventoryClick,
                 onRecipesClick = { },
                 onScannerClick = onScannerClick,
-                onPersonalClick = onPersonalClick
+                onPersonalClick = onPersonalClick,
+                esGerente = esGerente
             )
 
-            // Panel izquierdo
             Column(
                 modifier = Modifier
                     .then(if (recetaSeleccionada == null) Modifier.weight(1f) else Modifier.width(400.dp))
@@ -147,7 +148,6 @@ fun RecipesScreen(
                     }
                 }
 
-                // Card de voz
                 if (isListening) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -173,7 +173,6 @@ fun RecipesScreen(
                     }
                 }
 
-                // Búsqueda
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = {
@@ -217,7 +216,6 @@ fun RecipesScreen(
                 }
             }
 
-            // Panel derecho: Detalle
             if (recetaSeleccionada != null) {
                 Box(
                     modifier = Modifier

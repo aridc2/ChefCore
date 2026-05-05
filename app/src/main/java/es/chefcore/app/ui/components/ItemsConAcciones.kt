@@ -25,6 +25,7 @@ import es.chefcore.app.data.database.Receta
 import es.chefcore.app.logic.UnitConverter
 import es.chefcore.app.ui.theme.ChefCoreColors
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecetaItemConAcciones(
@@ -50,7 +51,6 @@ fun RecetaItemConAcciones(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Imagen o placeholder
             Box(
                 modifier = Modifier
                     .size(72.dp)
@@ -75,7 +75,7 @@ fun RecetaItemConAcciones(
                 }
             }
 
-            // Información
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = receta.nombre,
@@ -111,38 +111,27 @@ fun RecetaItemConAcciones(
                 }
             }
 
-            // Botones de acción GIGANTES
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(
                     onClick = onEdit,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(
-                            ChefCoreColors.AccentYellow.copy(alpha = 0.15f),
-                            RoundedCornerShape(12.dp)
-                        )
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = "Editar",
-                        tint = ChefCoreColors.AccentYellowDark,
-                        modifier = Modifier.size(32.dp)
+                        tint = ChefCoreColors.AccentYellow,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(
-                            ChefCoreColors.ErrorRed.copy(alpha = 0.1f),
-                            RoundedCornerShape(12.dp)
-                        )
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Eliminar",
                         tint = ChefCoreColors.ErrorRed,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
@@ -150,10 +139,12 @@ fun RecetaItemConAcciones(
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IngredienteItemConAcciones(
     ingrediente: Ingrediente,
+    esGerente: Boolean = true,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -197,51 +188,43 @@ fun IngredienteItemConAcciones(
                     maxLines = 1
                 )
                 Text(
-                    text = "${"%.2f".format(ingrediente.cantidad)} ${ingrediente.unidad} • " +
-                            "${"%.2f".format(ingrediente.precio)}€/${ingrediente.unidad}",
+                    text = if (esGerente)
+                        "${"%.2f".format(ingrediente.cantidad)} ${ingrediente.unidad} • ${"%.2f".format(ingrediente.precio)}€/${ingrediente.unidad}"
+                    else
+                        "${"%.2f".format(ingrediente.cantidad)} ${ingrediente.unidad}",
                     style = MaterialTheme.typography.bodySmall,
                     color = ChefCoreColors.TextMedium
                 )
             }
 
-            // Botones de acción GIGANTES
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(
                     onClick = onEdit,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(
-                            ChefCoreColors.AccentYellow.copy(alpha = 0.15f),
-                            RoundedCornerShape(12.dp)
-                        )
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = "Editar",
-                        tint = ChefCoreColors.AccentYellowDark,
-                        modifier = Modifier.size(32.dp)
+                        tint = ChefCoreColors.AccentYellow,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(
-                            ChefCoreColors.ErrorRed.copy(alpha = 0.1f),
-                            RoundedCornerShape(12.dp)
-                        )
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Eliminar",
                         tint = ChefCoreColors.ErrorRed,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun ConfirmDeleteDialog(
@@ -291,6 +274,7 @@ fun ConfirmDeleteDialog(
     )
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditarIngredienteDialog(
@@ -304,7 +288,6 @@ fun EditarIngredienteDialog(
     var unidad by remember { mutableStateOf(ingrediente.unidad) }
     var expandedUnidad by remember { mutableStateOf(false) }
 
-    // Unidades compatibles con la unidad actual del ingrediente
     val unidades = UnitConverter.obtenerUnidadesCompatibles(unidad)
         .ifEmpty { listOf("kg", "g", "L", "ml", "cl", "ud") }
 
@@ -328,7 +311,6 @@ fun EditarIngredienteDialog(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
-                    // Desplegable de unidades compatibles
                     ExposedDropdownMenuBox(
                         expanded = expandedUnidad,
                         onExpandedChange = { expandedUnidad = !expandedUnidad },
