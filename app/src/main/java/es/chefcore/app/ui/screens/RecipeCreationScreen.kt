@@ -56,14 +56,12 @@ fun RecipeCreationScreen(
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
 
-    // Estados básicos
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var tiempoMinutos by remember { mutableStateOf("30") }
     var mainImageUri by remember { mutableStateOf<Uri?>(null) }
     var instructions by remember { mutableStateOf("") }
 
-    // Estados para el Escandallo
     var ingredientesAñadidos by remember { mutableStateOf<List<Pair<Ingrediente, Double>>>(emptyList()) }
     var expandedIngredientes by remember { mutableStateOf(false) }
     var expandedUnidades by remember { mutableStateOf(false) }
@@ -77,7 +75,6 @@ fun RecipeCreationScreen(
     LaunchedEffect(recetaId) {
         if (recetaId != null) {
             try {
-                // 1. Tomamos la receta
                 val receta = viewModel.obtenerReceta(recetaId).firstOrNull()
                 receta?.let {
                     name = it.nombre
@@ -87,17 +84,14 @@ fun RecipeCreationScreen(
                     instructions = it.instrucciones ?: ""
                 }
 
-                // 2. Tomamos el inventario. Si está vacío porque la app acaba de arrancar, esperamos 150ms.
                 var inventarioActual = viewModel.ingredientesDisponibles.first()
                 if (inventarioActual.isEmpty()) {
                     delay(150) // Micro pausa de seguridad para no bloquear
                     inventarioActual = viewModel.ingredientesDisponibles.first()
                 }
 
-                // 3. Tomamos los ingredientes asociados a la receta
                 val ingredientesReceta = viewModel.obtenerIngredientesDeReceta(recetaId).first()
 
-                // 4. Cruzamos los datos para rellenar la UI
                 ingredientesAñadidos = ingredientesReceta.mapNotNull { ingReceta ->
                     inventarioActual.find { it.id == ingReceta.ingredienteId }?.let { ingrediente ->
                         Pair(ingrediente, ingReceta.cantidadNecesaria)
@@ -114,7 +108,7 @@ fun RecipeCreationScreen(
 
     val esModoEdicion = recetaId != null
 
-    Row(modifier = Modifier.fillMaxSize().background(ChefCoreColors.BackgroundLight)) {
+    Row(modifier = Modifier.fillMaxSize().systemBarsPadding().background(ChefCoreColors.BackgroundLight)) {
         Sidebar(
             currentScreen = "RecipeCreation",
             onSettingsClick = onSettingsClick,
@@ -146,7 +140,6 @@ fun RecipeCreationScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // === CABECERA ===
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -184,7 +177,6 @@ fun RecipeCreationScreen(
                     }
                 }
 
-                // === DATOS GENERALES ===
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Imagen del plato", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -249,7 +241,6 @@ fun RecipeCreationScreen(
 
                 HorizontalDivider()
 
-                // === SECCIÓN DE ESCANDALLO ===
                 Text("Composición del Plato", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
                 Row(
@@ -376,7 +367,6 @@ fun RecipeCreationScreen(
                     }
                 }
 
-                // === LISTA DE INGREDIENTES ===
                 if (ingredientesAñadidos.isNotEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -446,7 +436,6 @@ fun RecipeCreationScreen(
     }
 }
 
-// Función auxiliar para copiar la imagen a local
 fun copiarImagenALocal(context: Context, uriOrigen: Uri): Uri? {
     if (uriOrigen.scheme == "file" || uriOrigen.toString().contains(context.packageName)) {
         return uriOrigen

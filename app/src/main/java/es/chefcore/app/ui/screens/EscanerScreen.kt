@@ -30,48 +30,44 @@ fun EscanerScreen(
     onSettingsClick: () -> Unit,
     onInventoryClick: () -> Unit,
     onRecipesClick: () -> Unit,
-    onPersonalClick: () -> Unit
+    onPersonalClick: () -> Unit,
+    esGerente: Boolean = true
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Controlador de la cámara (CameraX)
     val cameraController = remember { LifecycleCameraController(context) }
 
-    // Estado para saber si tenemos permiso
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         )
     }
 
-    // Ventana emergente para pedir permiso
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasCameraPermission = isGranted
     }
 
-    // Nada más entrar a la pantalla, pedimos permiso si no lo tenemos
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    Row(modifier = Modifier.fillMaxSize().background(ChefCoreColors.BackgroundLight)) {
+    Row(modifier = Modifier.fillMaxSize().systemBarsPadding().background(ChefCoreColors.BackgroundLight)) {
 
-        // Sidebar para mantener la navegación unificada
         Sidebar(
             currentScreen = "Scanner",
             onSettingsClick = onSettingsClick,
             onInventoryClick = onInventoryClick,
             onRecipesClick = onRecipesClick,
-            onScannerClick = { }, // Ya estamos aquí
-            onPersonalClick = onPersonalClick
+            onScannerClick = { },
+            onPersonalClick = onPersonalClick,
+            esGerente = esGerente
         )
 
-        // Contenido del Escáner
         Column(modifier = Modifier.padding(32.dp).weight(1f)) {
             Text("Escanear Albarán", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ChefCoreColors.TextDark)
             Text("Enfoca el ticket o factura para extraer los ingredientes mediante IA", color = ChefCoreColors.TextMedium)
@@ -88,7 +84,6 @@ fun EscanerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (hasCameraPermission) {
-                    // Si hay permiso, conectamos la cámara de Android con Compose
                     AndroidView(
                         factory = { ctx ->
                             PreviewView(ctx).apply {

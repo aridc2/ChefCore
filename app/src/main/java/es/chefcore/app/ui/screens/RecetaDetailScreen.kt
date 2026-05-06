@@ -29,27 +29,24 @@ import es.chefcore.app.viewmodel.RecetaDetailViewModel
 fun RecetaDetailScreen(
     recetaId: Int,
     onVolver: () -> Unit,
+    esGerente: Boolean = true,
     onEditarReceta: ((Int) -> Unit)? = null,
     viewModel: RecetaDetailViewModel = viewModel()
 ) {
-    // Estados del ViewModel
     val receta by viewModel.receta.collectAsState()
     val ingredientesEnReceta by viewModel.ingredientesEnReceta.collectAsState()
     val ingredientesDisponibles by viewModel.ingredientesDisponibles.collectAsState()
     val costeTotalProduccion by viewModel.costeTotalProduccion.collectAsState()
 
-    // Estados locales
     var showSelectorDialog by remember { mutableStateOf(false) }
     var showCantidadDialog by remember { mutableStateOf(false) }
     var ingredienteSeleccionado by remember { mutableStateOf<es.chefcore.app.data.database.Ingrediente?>(null) }
     var ingredienteEnRecetaEditando by remember { mutableStateOf<es.chefcore.app.data.database.IngredienteEnReceta?>(null) }
 
-    // Estados Modo Cocina
     var modoCocinaActivo by remember { mutableStateOf(false) }
     var showRacionesDialog by remember { mutableStateOf(false) }
     var raciones by remember { mutableIntStateOf(1) }
 
-    // Snackbar para feedback de prepararPlato
     val snackbarHostState = remember { SnackbarHostState() }
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
     LaunchedEffect(feedbackMessage) {
@@ -80,7 +77,6 @@ fun RecetaDetailScreen(
                     }
                 },
                 actions = {
-                    // Botón Preparar Plato — siempre visible, grande
                     Button(
                         onClick = { showRacionesDialog = true },
                         colors = ButtonDefaults.buttonColors(
@@ -148,7 +144,6 @@ fun RecetaDetailScreen(
                         )
                     }
                 } ?: run {
-                    // Placeholder si no hay imagen
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -183,7 +178,6 @@ fun RecetaDetailScreen(
                 }
             }
 
-            // Información básica
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -218,8 +212,7 @@ fun RecetaDetailScreen(
                                 )
                             }
 
-                            // Precio de venta
-                            if ((receta?.precioVenta ?: 0.0) > 0) {
+                            if (esGerente && (receta?.precioVenta ?: 0.0) > 0) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
@@ -243,7 +236,6 @@ fun RecetaDetailScreen(
                 }
             }
 
-            // Sección: Escandallo (ingredientes)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -263,7 +255,6 @@ fun RecetaDetailScreen(
                 }
             }
 
-            // Lista de ingredientes
             if (ingredientesEnReceta.isEmpty()) {
                 item {
                     Card(
@@ -303,6 +294,7 @@ fun RecetaDetailScreen(
                 items(ingredientesEnReceta) { ingrediente ->
                     IngredienteEnRecetaCard(
                         ingredienteEnReceta = ingrediente,
+                        esGerente = esGerente,
                         onEdit = {
                             ingredienteEnRecetaEditando = ingrediente
                             val ing = ingredientesDisponibles.find {
@@ -318,8 +310,7 @@ fun RecetaDetailScreen(
                 }
             }
 
-            // Resumen de costes
-            if (ingredientesEnReceta.isNotEmpty()) {
+            if (esGerente && ingredientesEnReceta.isNotEmpty()) {
                 item {
                     RecetaCosteSummary(
                         costeTotalProduccion = costeTotalProduccion,
@@ -331,7 +322,6 @@ fun RecetaDetailScreen(
                 }
             }
 
-            // Instrucciones como pasos numerados + botón Preparar Plato
             item {
                 val pasos = remember(receta?.instrucciones) {
                     receta?.instrucciones
@@ -422,7 +412,6 @@ fun RecetaDetailScreen(
         }
     }
 
-    // ── DIÁLOGO: ¿Cuántas raciones? ──────────────────────────────────────────
     if (showRacionesDialog) {
         AlertDialog(
             onDismissRequest = { showRacionesDialog = false },
@@ -484,7 +473,6 @@ fun RecetaDetailScreen(
         )
     }
 
-    // ── MODO COCINA: se renderiza encima de todo ──────────────────────────────
     if (modoCocinaActivo) {
         ModoCocinaScreen(
             nombreReceta = receta?.nombre ?: "",
@@ -495,7 +483,6 @@ fun RecetaDetailScreen(
         )
     }
 
-    // Diálogo selector de ingredientes
     if (showSelectorDialog) {
         IngredienteSelectorDialog(
             ingredientesDisponibles = ingredientesDisponibles,
@@ -509,7 +496,6 @@ fun RecetaDetailScreen(
         )
     }
 
-    // Diálogo configurar cantidad
     if (showCantidadDialog && ingredienteSeleccionado != null) {
         ConfigurarCantidadDialog(
             ingrediente = ingredienteSeleccionado!!,

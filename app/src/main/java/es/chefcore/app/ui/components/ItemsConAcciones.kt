@@ -30,6 +30,7 @@ import es.chefcore.app.ui.theme.ChefCoreColors
 @Composable
 fun RecetaItemConAcciones(
     receta: Receta,
+    esGerente: Boolean = true,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -51,6 +52,7 @@ fun RecetaItemConAcciones(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Imagen o placeholder
             Box(
                 modifier = Modifier
                     .size(72.dp)
@@ -75,7 +77,7 @@ fun RecetaItemConAcciones(
                 }
             }
 
-
+            // Información
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = receta.nombre,
@@ -99,7 +101,7 @@ fun RecetaItemConAcciones(
                         style = MaterialTheme.typography.bodySmall,
                         color = ChefCoreColors.TextMedium
                     )
-                    if (receta.precioVenta > 0) {
+                    if (esGerente && receta.precioVenta > 0) {
                         Text("•", color = ChefCoreColors.TextMedium)
                         Text(
                             text = "${"%.2f".format(receta.precioVenta)}€",
@@ -112,6 +114,7 @@ fun RecetaItemConAcciones(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Botón Editar
                 IconButton(
                     onClick = onEdit,
                     modifier = Modifier.size(44.dp)

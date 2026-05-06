@@ -44,16 +44,13 @@ fun RecipesScreen(
     val recetaSeleccionada by viewModel.recetaSeleccionada.collectAsState()
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
 
-    // Estados locales
     val focusManager = LocalFocusManager.current
     var searchQuery by remember { mutableStateOf("") }
     var recetaAEliminar by remember { mutableStateOf<Receta?>(null) }
 
-    // Estados de voz
     var isListening by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
 
-    // Snackbar para feedback
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(feedbackMessage) {
@@ -148,6 +145,7 @@ fun RecipesScreen(
                     }
                 }
 
+                // Card de voz
                 if (isListening) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -173,6 +171,7 @@ fun RecipesScreen(
                     }
                 }
 
+                // Búsqueda
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = {
@@ -206,6 +205,7 @@ fun RecipesScreen(
                             ) {
                                 RecetaItemConAcciones(
                                     receta = receta,
+                                    esGerente = esGerente,
                                     onClick = { viewModel.seleccionarReceta(receta.id) },
                                     onEdit = { onNavigateToEdit(receta.id) },
                                     onDelete = { recetaAEliminar = receta }
@@ -216,6 +216,7 @@ fun RecipesScreen(
                 }
             }
 
+            // Panel derecho: Detalle
             if (recetaSeleccionada != null) {
                 Box(
                     modifier = Modifier
@@ -224,6 +225,7 @@ fun RecipesScreen(
                 ) {
                     RecetaDetailScreen(
                         recetaId = recetaSeleccionada!!,
+                        esGerente = esGerente,
                         onVolver = { viewModel.seleccionarReceta(null) }
                     )
                 }

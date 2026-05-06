@@ -46,7 +46,7 @@ fun ChefCoreNavigation() {
                 viewModel = authViewModel,
                 usuarios = usuarios,
                 nombreRestaurante = authViewModel.getNombreRestaurante(),
-                modoInicial = 1
+                modoInicial = 1 // Abre en tab Registro
             )
         }
 
@@ -63,6 +63,7 @@ fun ChefCoreNavigation() {
                 viewModel = authViewModel
             )
         }
+
 
         is AuthUiState.LoggedIn -> {
             val esGerente = (authState as AuthUiState.LoggedIn).rol == "Gerente"
@@ -110,6 +111,7 @@ fun ChefCoreNavigation() {
                 )
 
                 is ChefCoreRoute.Scanner -> EscanerScreen(
+                    esGerente         = esGerente,
                     onSettingsClick   = { currentRoute = ChefCoreRoute.Settings },
                     onInventoryClick  = { currentRoute = ChefCoreRoute.Inventory },
                     onRecipesClick    = { currentRoute = ChefCoreRoute.Recipes },

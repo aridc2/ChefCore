@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,22 +50,12 @@ fun SettingsScreen(
     onScannerClick: () -> Unit,
     onLogout: () -> Unit = {}
 ) {
-    // Observar estados del ViewModel
     val currency by viewModel.currency.collectAsState()
     val ivaPercentage by viewModel.ivaPercentage.collectAsState()
-    val isDarkMode by viewModel.isDarkMode.collectAsState()
-    val fontSize by viewModel.fontSize.collectAsState()
-    val voiceEnabled by viewModel.voiceEnabled.collectAsState()
-    val voiceLanguage by viewModel.voiceLanguage.collectAsState()
     val cameraPermissionGranted by viewModel.cameraPermissionGranted.collectAsState()
-    val shouldShowRationale by viewModel.shouldShowRationale.collectAsState()
-    val showDeleteConfirmation by viewModel.showDeleteConfirmation.collectAsState()
 
-    // Estados locales para UI
     var showCurrencyDropdown by remember { mutableStateOf(false) }
-    var showLanguageDropdown by remember { mutableStateOf(false) }
 
-    // Launcher para permisos de cámara
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -74,9 +65,9 @@ fun SettingsScreen(
     Row(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
             .background(color = ChefCoreColors.BackgroundLight)
     ) {
-        // Sidebar
         Sidebar(
             currentScreen = "Settings",
             onSettingsClick = { },
@@ -87,7 +78,6 @@ fun SettingsScreen(
             esGerente = esGerente
         )
 
-        // Contenido principal
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -97,185 +87,80 @@ fun SettingsScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Título
             Text(
                 text = "Configuración",
                 style = MaterialTheme.typography.displaySmall,
                 color = ChefCoreColors.TextDark
             )
 
-            // ==================== SECCIÓN 1: NEGOCIO ====================
-            SettingsSection(
-                title = "Negocio",
-                icon = Icons.Default.Store,
-                content = {
-                    // Opción 1: Moneda
-                    SettingRow(
-                        label = "Moneda",
-                        icon = Icons.Default.AttachMoney
-                    ) {
-                        Box {
-                            Button(
-                                onClick = { showCurrencyDropdown = !showCurrencyDropdown },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = ChefCoreColors.SurfaceGray,
-                                    contentColor = ChefCoreColors.TextDark
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier
-                                    .height(40.dp)
-                                    .width(100.dp)
-                            ) {
-                                Text(currency, style = MaterialTheme.typography.labelLarge)
-                            }
-                            DropdownMenu(
-                                expanded = showCurrencyDropdown,
-                                onDismissRequest = { showCurrencyDropdown = false }
-                            ) {
-                                listOf("EUR €", "USD $", "GBP £", "JPY ¥").forEach { curr ->
-                                    DropdownMenuItem(
-                                        text = { Text(curr) },
-                                        onClick = {
-                                            viewModel.setCurrency(curr.split(" ")[0])
-                                            showCurrencyDropdown = false
-                                        }
-                                    )
+            if (esGerente) {
+                SettingsSection(
+                    title = "Negocio",
+                    icon = Icons.Default.Store,
+                    content = {
+                        // Opción 1: Moneda
+                        SettingRow(
+                            label = "Moneda",
+                            icon = Icons.Default.AttachMoney
+                        ) {
+                            Box {
+                                Button(
+                                    onClick = { showCurrencyDropdown = !showCurrencyDropdown },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = ChefCoreColors.SurfaceGray,
+                                        contentColor = ChefCoreColors.TextDark
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .width(100.dp)
+                                ) {
+                                    Text(currency, style = MaterialTheme.typography.labelLarge)
+                                }
+                                DropdownMenu(
+                                    expanded = showCurrencyDropdown,
+                                    onDismissRequest = { showCurrencyDropdown = false }
+                                ) {
+                                    listOf("EUR €", "USD $", "GBP £", "JPY ¥").forEach { curr ->
+                                        DropdownMenuItem(
+                                            text = { Text(curr) },
+                                            onClick = {
+                                                viewModel.setCurrency(curr.split(" ")[0])
+                                                showCurrencyDropdown = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Opción 2: IVA
-                    SettingRow(
-                        label = "IVA: ${ivaPercentage.toInt()}%",
-                        icon = Icons.Default.Percent
-                    ) {
-                        Slider(
-                            value = ivaPercentage,
-                            onValueChange = { viewModel.setIva(it) },
-                            valueRange = 0f..50f,
-                            steps = 24,
-                            modifier = Modifier.width(150.dp),
-                            colors = SliderDefaults.colors(
-                                thumbColor = ChefCoreColors.PrimaryGreen,
-                                activeTrackColor = ChefCoreColors.PrimaryGreen
+                        // Opción 2: IVA
+                        SettingRow(
+                            label = "IVA: ${ivaPercentage.toInt()}%",
+                            icon = Icons.Default.Percent
+                        ) {
+                            Slider(
+                                value = ivaPercentage,
+                                onValueChange = { viewModel.setIva(it) },
+                                valueRange = 0f..50f,
+                                steps = 24,
+                                modifier = Modifier.width(150.dp),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = ChefCoreColors.PrimaryGreen,
+                                    activeTrackColor = ChefCoreColors.PrimaryGreen
+                                )
                             )
-                        )
-                    }
-                }
-            )
-
-            // ==================== SECCIÓN 2: INTERFAZ ====================
-            SettingsSection(
-                title = "Interfaz",
-                icon = Icons.Default.Palette,
-                content = {
-                    // Modo oscuro
-                    SettingRow(
-                        label = "Modo oscuro",
-                        icon = Icons.Default.DarkMode
-                    ) {
-                        Switch(
-                            checked = isDarkMode,
-                            onCheckedChange = { viewModel.setDarkMode(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = ChefCoreColors.PrimaryGreen,
-                                checkedTrackColor = ChefCoreColors.PrimaryGreen.copy(alpha = 0.5f)
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Tamaño de fuente
-                    SettingRow(
-                        label = "Tamaño texto: ${(fontSize * 100).toInt()}%",
-                        icon = Icons.Default.FormatSize
-                    ) {
-                        Slider(
-                            value = fontSize,
-                            onValueChange = { viewModel.setFontSize(it) },
-                            valueRange = 0.8f..1.5f,
-                            steps = 6,
-                            modifier = Modifier.width(150.dp),
-                            colors = SliderDefaults.colors(
-                                thumbColor = ChefCoreColors.AccentYellow,
-                                activeTrackColor = ChefCoreColors.AccentYellow
-                            )
-                        )
-                    }
-                }
-            )
-
-            // ==================== SECCIÓN 3: COMANDOS DE VOZ ====================
-            SettingsSection(
-                title = "Comandos de Voz",
-                icon = Icons.Default.Mic,
-                content = {
-                    // Activar comandos de voz
-                    SettingRow(
-                        label = "Comandos de voz",
-                        icon = Icons.Default.RecordVoiceOver
-                    ) {
-                        Switch(
-                            checked = voiceEnabled,
-                            onCheckedChange = { viewModel.setVoiceEnabled(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = ChefCoreColors.PrimaryGreen,
-                                checkedTrackColor = ChefCoreColors.PrimaryGreen.copy(alpha = 0.5f)
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Idioma de voz
-                    SettingRow(
-                        label = "Idioma de voz",
-                        icon = Icons.Default.Language
-                    ) {
-                        Box {
-                            Button(
-                                onClick = { showLanguageDropdown = !showLanguageDropdown },
-                                enabled = voiceEnabled,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = ChefCoreColors.SurfaceGray,
-                                    contentColor = ChefCoreColors.TextDark
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier
-                                    .height(40.dp)
-                                    .width(120.dp)
-                            ) {
-                                Text(voiceLanguage, style = MaterialTheme.typography.labelLarge)
-                            }
-                            DropdownMenu(
-                                expanded = showLanguageDropdown,
-                                onDismissRequest = { showLanguageDropdown = false }
-                            ) {
-                                listOf("Español", "English", "Français").forEach { lang ->
-                                    DropdownMenuItem(
-                                        text = { Text(lang) },
-                                        onClick = {
-                                            viewModel.setVoiceLanguage(lang)
-                                            showLanguageDropdown = false
-                                        }
-                                    )
-                                }
-                            }
                         }
                     }
-                }
-            )
+                )
+            }
 
-            // ==================== SECCIÓN 4: PERMISOS (CÁMARA) ====================
             SettingsSection(
                 title = "Permisos",
                 icon = Icons.Default.Security,
                 content = {
-                    // Permiso de cámara para escaneo de albaranes
                     SettingRow(
                         label = "Cámara (Escaneo de albaranes)",
                         icon = Icons.Default.CameraAlt
@@ -313,7 +198,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Explicación del permiso
                     if (!cameraPermissionGranted) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Box(
@@ -345,7 +229,6 @@ fun SettingsScreen(
                 }
             )
 
-            // ==================== SECCIÓN 6: INFORMACIÓN ====================
             SettingsSection(
                 title = "Información",
                 icon = Icons.Default.Info,
@@ -363,7 +246,6 @@ fun SettingsScreen(
                 }
             )
 
-            // ==================== CERRAR SESIÓN ====================
             Button(
                 onClick = onLogout,
                 modifier = Modifier

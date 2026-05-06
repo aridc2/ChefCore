@@ -75,7 +75,6 @@ fun IngredienteSelectorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Buscador
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -91,7 +90,6 @@ fun IngredienteSelectorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Lista de ingredientes
                 if (filteredIngredientes.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -187,10 +185,8 @@ fun ConfigurarCantidadDialog(
     }
     var expandedUnidades by remember { mutableStateOf(false) }
 
-    // Unidades compatibles
     val unidadesDisponibles = UnitConverter.obtenerUnidadesCompatibles(ingrediente.unidad)
 
-    // Calcular coste en tiempo real
     val costeCalculado = remember(cantidad, unidadSeleccionada) {
         val cant = cantidad.toDoubleOrNull() ?: 0.0
         if (cant > 0) {
@@ -232,7 +228,6 @@ fun ConfigurarCantidadDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Cantidad
                 OutlinedTextField(
                     value = cantidad,
                     onValueChange = { cantidad = it },
@@ -247,7 +242,6 @@ fun ConfigurarCantidadDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Selector de unidad
                 ExposedDropdownMenuBox(
                     expanded = expandedUnidades,
                     onExpandedChange = { expandedUnidades = !expandedUnidades }
@@ -285,7 +279,6 @@ fun ConfigurarCantidadDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Vista previa del coste
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -312,7 +305,6 @@ fun ConfigurarCantidadDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Botones
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -354,6 +346,7 @@ fun ConfigurarCantidadDialog(
 @Composable
 fun IngredienteEnRecetaCard(
     ingredienteEnReceta: IngredienteEnReceta,
+    esGerente: Boolean = true,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -369,7 +362,6 @@ fun IngredienteEnRecetaCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Info del ingrediente
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = ingredienteEnReceta.nombre,
@@ -386,17 +378,18 @@ fun IngredienteEnRecetaCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = ChefCoreColors.TextMedium
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "• €${"%.2f".format(ingredienteEnReceta.costeTotal)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ChefCoreColors.PrimaryGreen,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    if (esGerente) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "• €${"%.2f".format(ingredienteEnReceta.costeTotal)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ChefCoreColors.PrimaryGreen,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
 
-            // Botones de acción
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(onClick = onEdit) {
                     Icon(
@@ -461,7 +454,6 @@ fun RecetaCosteSummary(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Coste de producción
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -478,7 +470,6 @@ fun RecetaCosteSummary(
             Divider()
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Precio de venta (editable)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -522,7 +513,6 @@ fun RecetaCosteSummary(
             Divider()
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Margen
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -543,7 +533,6 @@ fun RecetaCosteSummary(
                 }
             }
 
-            // Alerta si no es rentable
             if (!esRentable) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(

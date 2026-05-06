@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,7 +79,8 @@ fun Sidebar(
         SidebarButton(
             icon = Icons.Default.Settings,
             label = "Ajustes",
-            onClick = onSettingsClick
+            onClick = onSettingsClick,
+            isActive = currentScreen == "Settings"
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -172,26 +174,26 @@ fun SidebarButton(
 ) {
     Column(
         modifier = Modifier
-            .width(120.dp)
+            .width(120.dp)  // Más ancho
             .background(
                 color = if (isActive) ChefCoreColors.PrimaryGreen else Color.Transparent,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp)  // Bordes más redondeados
             )
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(12.dp),  // Más padding
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             painter = icon,
             contentDescription = label,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(48.dp),  // Iconos mucho más grandes
             tint = if (isActive) Color.White else ChefCoreColors.TextDark
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium,  // Texto un poco más grande
             color = if (isActive) Color.White else ChefCoreColors.TextDark
         )
     }
@@ -307,7 +309,7 @@ fun ChefCoreTextField(
 @Composable
 fun IngredienteCard(
     ingrediente: Ingrediente,
-    userRole: String,
+    userRole: String, // "Gerente" o "Empleado"
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -326,8 +328,8 @@ fun IngredienteCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Column(modifier = Modifier.weight(1f)) {
+                // Nombre
                 Text(
                     text = ingrediente.nombre,
                     style = MaterialTheme.typography.titleMedium,
@@ -336,6 +338,7 @@ fun IngredienteCard(
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_inventory),
@@ -438,7 +441,7 @@ fun InventoryProductCard(
 @Composable
 fun RecetaCardCompleta(
     receta: Receta,
-    rentabilidad: RentabilidadReceta?, // Puede ser null si aún no se calculó
+    rentabilidad: RentabilidadReceta?,
     userRole: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -452,6 +455,7 @@ fun RecetaCardCompleta(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Nombre de la receta
             Text(
                 text = receta.nombre,
                 style = MaterialTheme.typography.titleLarge,
@@ -459,6 +463,7 @@ fun RecetaCardCompleta(
                 fontWeight = FontWeight.Bold
             )
 
+            // Descripción (si existe)
             if (!receta.instrucciones.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -470,11 +475,13 @@ fun RecetaCardCompleta(
                 )
             }
 
+            // INFORMACIÓN FINANCIERA - Solo para Gerente
             if (userRole == "Gerente" && rentabilidad != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Divider(color = ChefCoreColors.SurfaceGray)
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Tabla de 3 columnas: Coste | PVP | Ganancia
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -498,6 +505,7 @@ fun RecetaCardCompleta(
                         )
                     }
 
+                    // PVP
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.weight(1f)
@@ -516,6 +524,7 @@ fun RecetaCardCompleta(
                         )
                     }
 
+                    // GANANCIA
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.weight(1f)
