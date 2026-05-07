@@ -31,6 +31,7 @@ fun EscanerScreen(
     onInventoryClick: () -> Unit,
     onRecipesClick: () -> Unit,
     onPersonalClick: () -> Unit,
+    onAlbaranesClick: () -> Unit = {},
     esGerente: Boolean = true
 ) {
     val context = LocalContext.current
@@ -44,6 +45,7 @@ fun EscanerScreen(
         )
     }
 
+    // Ventana emergente para pedir permiso
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -68,13 +70,13 @@ fun EscanerScreen(
             esGerente = esGerente
         )
 
+        // Contenido del Escáner
         Column(modifier = Modifier.padding(32.dp).weight(1f)) {
             Text("Escanear Albarán", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ChefCoreColors.TextDark)
             Text("Enfoca el ticket o factura para extraer los ingredientes mediante IA", color = ChefCoreColors.TextMedium)
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Visor de Cámara
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -84,6 +86,7 @@ fun EscanerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (hasCameraPermission) {
+                    // Si hay permiso, conectamos la cámara de Android con Compose
                     AndroidView(
                         factory = { ctx ->
                             PreviewView(ctx).apply {
@@ -109,6 +112,16 @@ fun EscanerScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = ChefCoreColors.PrimaryGreen)
             ) {
                 Text("ANALIZAR ALBARÁN", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onAlbaranesClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = ChefCoreColors.PrimaryGreen)
+            ) {
+                Text("Ver historial de albaranes", fontWeight = FontWeight.Medium)
             }
         }
     }

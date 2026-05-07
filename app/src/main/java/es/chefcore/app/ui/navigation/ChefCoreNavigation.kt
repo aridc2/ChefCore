@@ -21,6 +21,7 @@ sealed class ChefCoreRoute {
     object Recipes        : ChefCoreRoute()
     object Settings       : ChefCoreRoute()
     object Scanner        : ChefCoreRoute()
+    object Albaranes      : ChefCoreRoute()
     object RecipeCreation : ChefCoreRoute()
     data class RecipeEdit(val recetaId: Int) : ChefCoreRoute()
 }
@@ -33,12 +34,14 @@ fun ChefCoreNavigation() {
 
     when (authState) {
 
+        // Comprobando estado inicial — spinner
         is AuthUiState.Loading -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = ChefCoreColors.PrimaryGreen)
             }
         }
 
+        // Sin cuenta → mostrar tab de Registro
         is AuthUiState.NeedRegister -> {
             val personalVM: PersonalManagementViewModel = viewModel()
             val usuarios by personalVM.usuarios.collectAsStateWithLifecycle()
@@ -50,10 +53,12 @@ fun ChefCoreNavigation() {
             )
         }
 
+        // Registrado en Firebase pero sin PIN → Crear PIN
         is AuthUiState.NeedCreatePin -> {
             CreatePinScreen(viewModel = authViewModel)
         }
 
+        // Tiene cuenta y PIN → Selección de perfil
         is AuthUiState.NeedPinLogin -> {
             val personalVM: PersonalManagementViewModel = viewModel()
             val usuarios by personalVM.usuarios.collectAsStateWithLifecycle()
@@ -64,7 +69,7 @@ fun ChefCoreNavigation() {
             )
         }
 
-
+        // Autenticado → Mostrar la pantalla actual de la app
         is AuthUiState.LoggedIn -> {
             val esGerente = (authState as AuthUiState.LoggedIn).rol == "Gerente"
 
@@ -115,6 +120,16 @@ fun ChefCoreNavigation() {
                     onSettingsClick   = { currentRoute = ChefCoreRoute.Settings },
                     onInventoryClick  = { currentRoute = ChefCoreRoute.Inventory },
                     onRecipesClick    = { currentRoute = ChefCoreRoute.Recipes },
+                    onPersonalClick   = { if (esGerente) currentRoute = ChefCoreRoute.PersonalManagement },
+                    onAlbaranesClick  = { currentRoute = ChefCoreRoute.Albaranes }
+                )
+
+                is ChefCoreRoute.Albaranes -> AlbaranListScreen(
+                    esGerente         = esGerente,
+                    onSettingsClick   = { currentRoute = ChefCoreRoute.Settings },
+                    onInventoryClick  = { currentRoute = ChefCoreRoute.Inventory },
+                    onRecipesClick    = { currentRoute = ChefCoreRoute.Recipes },
+                    onScannerClick    = { currentRoute = ChefCoreRoute.Scanner },
                     onPersonalClick   = { if (esGerente) currentRoute = ChefCoreRoute.PersonalManagement }
                 )
 

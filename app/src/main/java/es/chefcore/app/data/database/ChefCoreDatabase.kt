@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         Albaran::class,
         RecetaIngrediente::class
     ],
-    version = 5,
+    version = 8,
     exportSchema = false
 )
 abstract class ChefCoreDatabase : RoomDatabase() {

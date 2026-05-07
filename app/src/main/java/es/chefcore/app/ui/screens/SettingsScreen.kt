@@ -3,6 +3,10 @@ package es.chefcore.app.ui.screens
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -245,6 +249,92 @@ fun SettingsScreen(
                     }
                 }
             )
+
+            if (esGerente) {
+                SettingsSection(
+                    title = "Nube",
+                    icon = Icons.Default.Cloud,
+                    content = {
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        var sincronizando by remember { mutableStateOf(false) }
+                        var restaurando by remember { mutableStateOf(false) }
+
+                        SettingRow(
+                            label = "Copia de seguridad en la nube",
+                            icon = Icons.Default.CloudUpload
+                        ) {}
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Button(
+                            onClick = {
+                                sincronizando = true
+                                es.chefcore.app.workers.SyncManager.syncNow(context)
+                                android.os.Handler(android.os.Looper.getMainLooper())
+                                    .postDelayed({ sincronizando = false }, 2000)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ChefCoreColors.PrimaryGreen,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (sincronizando) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Sincronizando...")
+                            } else {
+                                Icon(
+                                    Icons.Default.CloudUpload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Subir a la nube", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                                restaurando = true
+                                es.chefcore.app.workers.SyncManager.restoreNow(context)
+                                android.os.Handler(android.os.Looper.getMainLooper())
+                                    .postDelayed({ restaurando = false }, 2000)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = ChefCoreColors.PrimaryGreen
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (restaurando) {
+                                CircularProgressIndicator(
+                                    color = ChefCoreColors.PrimaryGreen,
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Restaurando...")
+                            } else {
+                                Icon(
+                                    Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Restaurar desde la nube", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+                )
+            }
 
             Button(
                 onClick = onLogout,

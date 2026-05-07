@@ -10,5 +10,6 @@ data class Ingrediente(
     val nombre: String,
     val cantidad: Double,
     val unidad: String,
-    val precio: Double = 0.0
+    val precio: Double = 0.0,
+    val imagenUri: String? = null
 )

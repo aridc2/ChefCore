@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.net.Uri
 import coil.compose.AsyncImage
 import es.chefcore.app.data.database.Ingrediente
 import es.chefcore.app.data.database.Receta
@@ -31,6 +32,7 @@ import es.chefcore.app.ui.theme.ChefCoreColors
 fun RecetaItemConAcciones(
     receta: Receta,
     esGerente: Boolean = true,
+    esRentable: Boolean = true,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -43,7 +45,12 @@ fun RecetaItemConAcciones(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, ChefCoreColors.SurfaceGray)
+        border = BorderStroke(
+            1.dp,
+            if (esGerente && !esRentable && receta.precioVenta > 0)
+                ChefCoreColors.ErrorRed.copy(alpha = 0.5f)
+            else ChefCoreColors.SurfaceGray
+        )
     ) {
         Row(
             modifier = Modifier
@@ -111,6 +118,26 @@ fun RecetaItemConAcciones(
                         )
                     }
                 }
+                if (esGerente && !esRentable && receta.precioVenta > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = ChefCoreColors.ErrorRed,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Margen por debajo del 20%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ChefCoreColors.ErrorRed,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -174,12 +201,21 @@ fun IngredienteItemConAcciones(
                     .background(ChefCoreColors.PrimaryGreen.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Inventory2,
-                    contentDescription = null,
-                    tint = ChefCoreColors.PrimaryGreen,
-                    modifier = Modifier.size(30.dp)
-                )
+                if (!ingrediente.imagenUri.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = Uri.parse(ingrediente.imagenUri),
+                        contentDescription = ingrediente.nombre,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Inventory2,
+                        contentDescription = null,
+                        tint = ChefCoreColors.PrimaryGreen,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
             }
 
             Column(modifier = Modifier.weight(1f)) {
@@ -283,13 +319,14 @@ fun ConfirmDeleteDialog(
 fun EditarIngredienteDialog(
     ingrediente: Ingrediente,
     onDismiss: () -> Unit,
-    onConfirm: (nombre: String, cantidad: Double, precio: Double, unidad: String) -> Unit
+    onConfirm: (nombre: String, cantidad: Double, precio: Double, unidad: String, imagenUri: String?) -> Unit
 ) {
     var nombre by remember { mutableStateOf(ingrediente.nombre) }
     var cantidad by remember { mutableStateOf(ingrediente.cantidad.toString()) }
     var precio by remember { mutableStateOf(ingrediente.precio.toString()) }
     var unidad by remember { mutableStateOf(ingrediente.unidad) }
     var expandedUnidad by remember { mutableStateOf(false) }
+    var imagenUri by remember { mutableStateOf<Uri?>(ingrediente.imagenUri?.let { Uri.parse(it) }) }
 
     val unidades = UnitConverter.obtenerUnidadesCompatibles(unidad)
         .ifEmpty { listOf("kg", "g", "L", "ml", "cl", "ud") }
@@ -299,6 +336,13 @@ fun EditarIngredienteDialog(
         title = { Text("Editar ${ingrediente.nombre}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                // ── Imagen del ingrediente ──────────────────────────────────
+                ImageUploadPicker(
+                    imageUri = imagenUri,
+                    onImageSelected = { imagenUri = it }
+                )
+
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
@@ -357,7 +401,8 @@ fun EditarIngredienteDialog(
                         nombre,
                         cantidad.replace(",", ".").toDoubleOrNull() ?: ingrediente.cantidad,
                         precio.replace(",", ".").toDoubleOrNull() ?: ingrediente.precio,
-                        unidad
+                        unidad,
+                        imagenUri?.toString()
                     )
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = ChefCoreColors.PrimaryGreen)

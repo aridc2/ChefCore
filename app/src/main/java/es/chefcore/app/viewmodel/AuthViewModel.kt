@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.Timestamp
+import es.chefcore.app.workers.SyncManager
 import es.chefcore.app.data.database.ChefCoreDatabase
 import es.chefcore.app.data.database.Usuario
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -167,6 +168,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             prefs.edit().putString("pin_gerente", pin).apply()
 
             _uiState.value = AuthUiState.LoggedIn(rol = "Gerente")
+            SyncManager.syncNow(getApplication())
         }
     }
 
@@ -178,15 +180,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val usuario = usuarios.find { it.pin == pin }
         if (usuario != null) {
             _uiState.value = AuthUiState.LoggedIn(rol = usuario.rol)
+            SyncManager.syncNow(getApplication())
         } else {
             _errorMessage.value = "PIN incorrecto"
         }
     }
 
     fun cerrarSesion() {
-        auth.signOut()
-        prefs.edit().remove("pin_creado").apply()
-        _uiState.value = AuthUiState.NeedRegister
+        SyncManager.cancelAll(getApplication())
+        _uiState.value = AuthUiState.NeedPinLogin
     }
 
     fun clearError() {
@@ -201,9 +203,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
 // ── Estados posibles de la autenticación ────────────────────────────────────
 sealed class AuthUiState {
-    object Loading        : AuthUiState()  // Comprobando estado inicial
-    object NeedRegister   : AuthUiState()  // Primera vez — ir a registro
-    object NeedCreatePin  : AuthUiState()  // Registrado pero sin PIN
-    object NeedPinLogin   : AuthUiState()  // Tiene cuenta — pedir PIN diario
+    object Loading        : AuthUiState()
+    object NeedRegister   : AuthUiState()
+    object NeedCreatePin  : AuthUiState()
+    object NeedPinLogin   : AuthUiState()
     data class LoggedIn(val rol: String) : AuthUiState() // Autenticado
 }

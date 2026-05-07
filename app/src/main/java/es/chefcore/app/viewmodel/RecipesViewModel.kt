@@ -71,23 +71,19 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
                     instrucciones = instrucciones,
                     imagenUri = imagenUri
                 )
-                recetaRepository.insertar(nueva)
+                val nuevoId = recetaRepository.insertar(nueva).toInt()
 
-                val recetaCreada = recetaRepository.buscarPorNombre(nueva.nombre)
-
-                if (recetaCreada != null) {
-                    ingredientes.forEach { (idIng, cant) ->
-                        val relacion = RecetaIngrediente(
-                            recetaId = recetaCreada.id,
-                            ingredienteId = idIng,
-                            cantidadNecesaria = cant
-                        )
-                        recetaRepository.añadirIngrediente(relacion)
-                    }
-
-                    calcularRentabilidad(recetaCreada.id)
-                    _feedbackMessage.value = " Receta '${nueva.nombre}' creada"
+                ingredientes.forEach { (idIng, cant) ->
+                    val relacion = RecetaIngrediente(
+                        recetaId = nuevoId,
+                        ingredienteId = idIng,
+                        cantidadNecesaria = cant
+                    )
+                    recetaRepository.añadirIngrediente(relacion)
                 }
+
+                calcularRentabilidad(nuevoId)
+                _feedbackMessage.value = " Receta '${nueva.nombre}' creada"
             } catch (e: Exception) {
                 _feedbackMessage.value = " Error al crear: ${e.message}"
                 e.printStackTrace()
@@ -131,7 +127,6 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
 
                 recetaRepository.actualizar(actualizada)
 
-                // Eliminar ingredientes anteriores y añadir los nuevos
                 recetaRepository.eliminarTodosIngredientes(recetaId)
 
                 ingredientes.forEach { (idIng, cant) ->
@@ -166,16 +161,12 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
-                // Primero eliminar la asociación con ingredientes
                 recetaRepository.eliminarTodosIngredientes(receta.id)
 
-                // Luego eliminar la receta
                 recetaRepository.eliminar(receta)
 
-                // Quitar de rentabilidades
                 _rentabilidades.value = _rentabilidades.value - receta.id
 
-                // Si era la receta seleccionada, deseleccionar
                 if (_recetaSeleccionada.value == receta.id) {
                     _recetaSeleccionada.value = null
                 }

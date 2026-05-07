@@ -11,6 +11,9 @@ interface AlbaranDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertar(albaran: Albaran)
 
-    @Query("SELECT * FROM albaranes")
+    @Query("SELECT * FROM albaranes ORDER BY id DESC")
     fun obtenerTodos(): Flow<List<Albaran>>
+
+    @Query("DELETE FROM albaranes WHERE id = :id")
+    suspend fun eliminar(id: Int)
 }

@@ -43,6 +43,7 @@ fun RecipesScreen(
     val recetasFiltradas by viewModel.recetasFiltradas.collectAsState()
     val recetaSeleccionada by viewModel.recetaSeleccionada.collectAsState()
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
+    val rentabilidades by viewModel.rentabilidades.collectAsState()
 
     val focusManager = LocalFocusManager.current
     var searchQuery by remember { mutableStateOf("") }
@@ -145,7 +146,6 @@ fun RecipesScreen(
                     }
                 }
 
-                // Card de voz
                 if (isListening) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -171,7 +171,6 @@ fun RecipesScreen(
                     }
                 }
 
-                // Búsqueda
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = {
@@ -206,6 +205,7 @@ fun RecipesScreen(
                                 RecetaItemConAcciones(
                                     receta = receta,
                                     esGerente = esGerente,
+                                    esRentable = rentabilidades[receta.id]?.esRentable ?: true,
                                     onClick = { viewModel.seleccionarReceta(receta.id) },
                                     onEdit = { onNavigateToEdit(receta.id) },
                                     onDelete = { recetaAEliminar = receta }
@@ -216,7 +216,6 @@ fun RecipesScreen(
                 }
             }
 
-            // Panel derecho: Detalle
             if (recetaSeleccionada != null) {
                 Box(
                     modifier = Modifier

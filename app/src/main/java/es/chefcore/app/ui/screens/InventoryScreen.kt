@@ -223,8 +223,8 @@ fun InventoryScreen(
         EditarIngredienteDialog(
             ingrediente = ing,
             onDismiss = { ingredienteAEditar = null },
-            onConfirm = { nombre, cantidad, precio, unidad ->
-                viewModel.actualizarIngrediente(ing, nombre, cantidad, precio, unidad)
+            onConfirm = { nombre, cantidad, precio, unidad, imagenUri ->
+                viewModel.actualizarIngrediente(ing, nombre, cantidad, precio, unidad, imagenUri)
                 ingredienteAEditar = null
             }
         )

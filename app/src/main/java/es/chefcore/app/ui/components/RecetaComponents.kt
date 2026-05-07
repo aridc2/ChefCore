@@ -440,7 +440,7 @@ fun RecetaCosteSummary(
             containerColor = if (esRentable) {
                 ChefCoreColors.PrimaryGreen.copy(alpha = 0.1f)
             } else {
-                ChefCoreColors.AccentYellow.copy(alpha = 0.1f)
+                ChefCoreColors.ErrorRed.copy(alpha = 0.07f)
             }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -528,7 +528,7 @@ fun RecetaCosteSummary(
                     Text(
                         text = "${"%.1f".format(porcentajeMargen)}% margen",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (esRentable) ChefCoreColors.PrimaryGreen else ChefCoreColors.AccentYellow
+                        color = if (esRentable) ChefCoreColors.PrimaryGreen else ChefCoreColors.ErrorRed
                     )
                 }
             }
@@ -538,7 +538,7 @@ fun RecetaCosteSummary(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(ChefCoreColors.AccentYellow.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                        .background(ChefCoreColors.ErrorRed.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -550,7 +550,7 @@ fun RecetaCosteSummary(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "⚠️ Margen bajo. Se recomienda mínimo 20%",
+                        text = "Margen bajo. Se recomienda mínimo 20%",
                         style = MaterialTheme.typography.bodySmall,
                         color = ChefCoreColors.TextDark
                     )

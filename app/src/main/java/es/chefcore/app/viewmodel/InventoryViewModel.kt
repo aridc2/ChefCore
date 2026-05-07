@@ -83,7 +83,8 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
         nuevoNombre: String,
         nuevaCantidad: Double,
         nuevoPrecio: Double,
-        nuevaUnidad: String
+        nuevaUnidad: String,
+        nuevaImagenUri: String? = null
     ) {
         viewModelScope.launch {
             try {
@@ -96,7 +97,8 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
                     nombre = nuevoNombre.trim(),
                     cantidad = nuevaCantidad,
                     precio = nuevoPrecio,
-                    unidad = nuevaUnidad
+                    unidad = nuevaUnidad,
+                    imagenUri = nuevaImagenUri
                 )
 
                 ingredienteRepository.actualizar(actualizado)

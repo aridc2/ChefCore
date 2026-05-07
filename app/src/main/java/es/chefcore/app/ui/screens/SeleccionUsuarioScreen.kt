@@ -137,13 +137,12 @@ private fun PantallaSeleccion(
             ) {
                 Text(
                     "No hay usuarios registrados.\nEl gerente debe crear los perfiles desde Ajustes.",
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = ChefCoreColors.TextMedium,
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
         } else {
-            // Grid de usuarios
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 160.dp),
                 modifier = Modifier.weight(1f),
@@ -162,7 +161,7 @@ private fun PantallaSeleccion(
         TextButton(onClick = onToggleRecuperarAcceso) {
             Text(
                 text = if (mostrarRecuperarAcceso) "Cancelar" else "Gerente: recuperar acceso con correo",
-                color = Color.White.copy(alpha = 0.75f),
+                color = ChefCoreColors.PrimaryGreen.copy(alpha = 0.75f),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -282,6 +281,7 @@ private fun TarjetaUsuario(
 
             Spacer(modifier = Modifier.height(4.dp))
 
+            // Badge de rol
             Box(
                 modifier = Modifier
                     .background(colorRol.copy(alpha = 0.12f), RoundedCornerShape(20.dp))

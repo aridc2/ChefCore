@@ -3,6 +3,7 @@ package es.chefcore.app.data.database
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
@@ -10,7 +11,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RecetaDao {
     @Insert
-    suspend fun insertar(receta: Receta)
+    suspend fun insertar(receta: Receta): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarConReemplazo(receta: Receta): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun asociarIngredienteConReemplazo(relacion: RecetaIngrediente)
 
     @Update
     suspend fun actualizar(receta: Receta)
@@ -41,7 +48,7 @@ interface RecetaDao {
     /**
      * Añade un ingrediente a una receta (crea la relación)
      */
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun asociarIngrediente(relacion: RecetaIngrediente)
 
     /**
@@ -55,6 +62,12 @@ interface RecetaDao {
      */
     @Query("DELETE FROM receta_ingrediente WHERE recetaId = :recetaId")
     suspend fun eliminarTodosIngredientesDeReceta(recetaId: Int)
+
+    /**
+     * Elimina TODOS los escandallos (usado antes de restaurar desde la nube)
+     */
+    @Query("DELETE FROM receta_ingrediente")
+    suspend fun borrarTodosEscandallos()
 
     /**
      * Actualiza la cantidad necesaria de un ingrediente en una receta
