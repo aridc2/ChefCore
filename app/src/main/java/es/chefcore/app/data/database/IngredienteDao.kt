@@ -31,4 +31,7 @@ interface IngredienteDao {
 
     @Query("DELETE FROM ingredientes")
     suspend fun borrarTodos()
+
+    @Query("SELECT * FROM ingredientes WHERE LOWER(nombre) = LOWER(:nombre) LIMIT 1")
+    suspend fun buscarPorNombreIgnorandoCase(nombre: String): Ingrediente?
 }

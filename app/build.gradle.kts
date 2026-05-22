@@ -69,6 +69,8 @@ dependencies {
     implementation("com.google.mlkit:text-recognition:16.0.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
     // Room
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")

@@ -28,16 +28,26 @@ import es.chefcore.app.ui.components.RecetaItemConAcciones
 import es.chefcore.app.ui.components.Sidebar
 import es.chefcore.app.ui.theme.ChefCoreColors
 import es.chefcore.app.viewmodel.RecipesViewModel
+import android.content.Intent
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import es.chefcore.app.viewmodel.VoiceViewModel
 
 @Composable
 fun RecipesScreen(
     viewModel: RecipesViewModel = viewModel(),
+    voiceViewModel: VoiceViewModel = viewModel(),
     esGerente: Boolean = true,
     onSettingsClick: () -> Unit,
     onInventoryClick: () -> Unit,
     onPersonalClick: () -> Unit,
     onScannerClick: () -> Unit,
     onNavigateToCreate: () -> Unit,
+    onNavigateToCreateVoz: (String) -> Unit = {},
     onNavigateToEdit: (Int) -> Unit
 ) {
     val recetasFiltradas by viewModel.recetasFiltradas.collectAsState()
@@ -52,20 +62,75 @@ fun RecipesScreen(
     var isListening by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
+    val speechIntent = remember {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES")
+            putExtra("android.speech.extra.PREFER_OFFLINE", true)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        }
+    }
+    DisposableEffect(Unit) {
+        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(p: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(v: Float) {}
+            override fun onBufferReceived(b: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onPartialResults(r: Bundle?) {
+                recognizedText = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+            }
+            override fun onResults(r: Bundle?) {
+                val texto = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                if (texto.isNotBlank()) { recognizedText = texto; voiceViewModel.procesarVoz(texto) }
+                isListening = false
+            }
+            override fun onError(err: Int) { isListening = false; recognizedText = "" }
+            override fun onEvent(t: Int, p: Bundle?) {}
+        })
+        onDispose { speechRecognizer.destroy() }
+    }
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            recognizedText = ""
+            isListening = true
+            speechRecognizer.startListening(speechIntent)
+        }
+    }
+
+    val navSenal by voiceViewModel.navSenal.collectAsStateWithLifecycle()
+    LaunchedEffect(navSenal) {
+        navSenal?.let { senal ->
+            when {
+                senal.startsWith("CREAR|")   -> onNavigateToCreateVoz(senal.substringAfter("CREAR|"))
+                senal.startsWith("DETALLE|") -> viewModel.seleccionarRecetaPorNombre(senal.substringAfter("DETALLE|"))
+                senal.startsWith("EDITAR|")  -> onNavigateToEdit(senal.substringAfter("EDITAR|").toIntOrNull() ?: 0)
+            }
+            voiceViewModel.clearNavSenal()
+        }
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
+    val voceFeedback    by voiceViewModel.feedback.collectAsStateWithLifecycle()
+    val recetaActiva    by voiceViewModel.recetaActiva.collectAsStateWithLifecycle()
+    LaunchedEffect(voceFeedback) {
+        voceFeedback?.let {
+            if (it.startsWith("Receta '") && it.endsWith("' cerrada")) {
+                viewModel.seleccionarReceta(null)
+            }
+            snackbarHostState.showSnackbar(it)
+            voiceViewModel.clearFeedback()
+        }
+    }
 
     LaunchedEffect(feedbackMessage) {
         feedbackMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearFeedback()
-        }
-    }
-
-    val micPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            isListening = true
         }
     }
 
@@ -111,9 +176,19 @@ fun RecipesScreen(
                     FilledTonalIconButton(
                         onClick = {
                             if (isListening) {
+                                speechRecognizer.cancel()
                                 isListening = false
                             } else {
-                                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                val yaPermitido = androidx.core.content.ContextCompat.checkSelfPermission(
+                                    context, Manifest.permission.RECORD_AUDIO
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (yaPermitido) {
+                                    recognizedText = ""
+                                    isListening = true
+                                    speechRecognizer.startListening(speechIntent)
+                                } else {
+                                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
                             }
                         },
                         modifier = Modifier.size(72.dp),
@@ -166,6 +241,45 @@ fun RecipesScreen(
                             Text(
                                 text = if (recognizedText.isEmpty()) "Escuchando..." else recognizedText,
                                 style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+
+                // Banner de receta activa en contexto de voz
+                if (recetaActiva.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = ChefCoreColors.PrimaryGreen.copy(alpha = 0.1f)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ChefCoreColors.PrimaryGreen.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Mic,
+                                    contentDescription = null,
+                                    tint = ChefCoreColors.PrimaryGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "Receta activa: $recetaActiva",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = ChefCoreColors.PrimaryGreen
+                                )
+                            }
+                            Text(
+                                text = "Di 'cerrar receta' para salir",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ChefCoreColors.TextMedium
                             )
                         }
                     }

@@ -64,7 +64,7 @@ fun SeleccionUsuarioScreen(
             label = "auth_transition"
         ) { usuario ->
             if (usuario == null) {
-                // ── Estado 1: Selección de perfil ─────────────────────────
+                // Estado 1: Selección de perfil
                 PantallaSeleccion(
                     usuarios = usuarios,
                     nombreRestaurante = nombreRestaurante,
@@ -75,7 +75,7 @@ fun SeleccionUsuarioScreen(
                     focusManager = focusManager
                 )
             } else {
-                // ── Estado 2: Introducir PIN ───────────────────────────────
+                // Estado 2: Introducir PIN
                 PantallaPin(
                     usuario = usuario,
                     viewModel = viewModel,
@@ -86,9 +86,9 @@ fun SeleccionUsuarioScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // ESTADO 1: Grid de perfiles
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 private fun PantallaSeleccion(
@@ -225,9 +225,9 @@ private fun PantallaSeleccion(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // Tarjeta de usuario en el grid
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 private fun TarjetaUsuario(
@@ -298,9 +298,9 @@ private fun TarjetaUsuario(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // ESTADO 2: Teclado PIN para el usuario seleccionado
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 private fun PantallaPin(

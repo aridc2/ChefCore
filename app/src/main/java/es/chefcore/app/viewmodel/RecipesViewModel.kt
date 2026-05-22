@@ -16,6 +16,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 
+/**
+ * ViewModel de la pantalla de recetas.
+ * Expone la lista de recetas con filtrado por nombre y la rentabilidad calculada
+ * de cada plato a partir del PMP actual de sus ingredientes.
+ */
 class RecipesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = ChefCoreDatabase.getDatabase(application)
@@ -50,7 +55,13 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun actualizarBusqueda(query: String) { _searchQuery.value = query }
+
     fun seleccionarReceta(recetaId: Int?) { _recetaSeleccionada.value = recetaId }
+
+    fun seleccionarRecetaPorNombre(nombre: String) {
+        val receta = recetasFiltradas.value.firstOrNull { it.nombre.equals(nombre, ignoreCase = true) }
+        if (receta != null) _recetaSeleccionada.value = receta.id
+    }
 
     fun clearFeedback() { _feedbackMessage.value = null }
 
@@ -91,7 +102,6 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-
     fun actualizarReceta(
         recetaId: Int,
         nombre: String,
@@ -105,13 +115,11 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val recetaExistente = recetaRepository.buscarPorId(recetaId) ?: return@launch
 
+                // Si cambia la imagen, liberar la anterior del almacenamiento local
                 if (recetaExistente.imagenUri != null && recetaExistente.imagenUri != imagenUri) {
                     try {
                         val oldFile = File(Uri.parse(recetaExistente.imagenUri).path ?: "")
-                        if (oldFile.exists()) {
-                            oldFile.delete()
-                            Log.d("ChefCore_Memoria", "¡FOTO BORRADA! Memoria liberada con éxito.")
-                        }
+                        if (oldFile.exists()) oldFile.delete()
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -126,7 +134,6 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
                 )
 
                 recetaRepository.actualizar(actualizada)
-
                 recetaRepository.eliminarTodosIngredientes(recetaId)
 
                 ingredientes.forEach { (idIng, cant) ->
@@ -153,16 +160,13 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
                 if (receta.imagenUri != null) {
                     try {
                         val file = File(Uri.parse(receta.imagenUri).path ?: "")
-                        if (file.exists()) {
-                            file.delete()
-                        }
+                        if (file.exists()) file.delete()
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
 
                 recetaRepository.eliminarTodosIngredientes(receta.id)
-
                 recetaRepository.eliminar(receta)
 
                 _rentabilidades.value = _rentabilidades.value - receta.id
@@ -179,17 +183,10 @@ class RecipesViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Obtiene una receta por ID (para modo edición)
-     */
-    fun obtenerReceta(recetaId: Int): Flow<Receta?> {
-        return database.recetaDao().observarPorId(recetaId)
-    }
+    fun obtenerReceta(recetaId: Int) = database.recetaDao().observarPorId(recetaId)
 
-    /**
-     * Obtiene los ingredientes de una receta (para modo edición)
-     */
-    fun obtenerIngredientesDeReceta(recetaId: Int) = database.recetaDao().observarIngredientesDeReceta(recetaId)
+    fun obtenerIngredientesDeReceta(recetaId: Int) =
+        database.recetaDao().observarIngredientesDeReceta(recetaId)
 
     fun calcularRentabilidad(recetaId: Int) {
         viewModelScope.launch {

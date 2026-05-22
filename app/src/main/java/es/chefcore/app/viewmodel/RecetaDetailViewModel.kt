@@ -9,6 +9,11 @@ import es.chefcore.app.logic.UnitConverter
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel del detalle de receta.
+ * Gestiona el escandallo (ingredientes y cantidades necesarias), el cálculo
+ * del coste de producción y el descuento de stock al preparar raciones.
+ */
 class RecetaDetailViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = ChefCoreDatabase.getDatabase(application)
@@ -19,37 +24,27 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
     private val _feedbackMessage = MutableStateFlow<String?>(null)
     val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
 
-    // Estado de la receta actual
     private val _recetaId = MutableStateFlow<Int?>(null)
 
     val receta: StateFlow<Receta?> = _recetaId
         .filterNotNull()
-        .flatMapLatest { id ->
-            recetaDao.observarPorId(id)
-        }
+        .flatMapLatest { id -> recetaDao.observarPorId(id) }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     val ingredientesEnReceta: StateFlow<List<IngredienteEnReceta>> = _recetaId
         .filterNotNull()
-        .flatMapLatest { id ->
-            recetaDao.observarIngredientesDeReceta(id)
-        }
+        .flatMapLatest { id -> recetaDao.observarIngredientesDeReceta(id) }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val ingredientesDisponibles: StateFlow<List<Ingrediente>> = ingredienteDao.obtenerTodos()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val costeTotalProduccion: StateFlow<Double> = ingredientesEnReceta
-        .map { lista ->
-            lista.sumOf { it.costeTotal }
-        }
+        .map { lista -> lista.sumOf { it.costeTotal } }
         .stateIn(viewModelScope, SharingStarted.Lazily, 0.0)
 
     private var recetaActual: Receta? = null
 
-    /**
-     * Carga la receta por ID
-     */
     fun cargarReceta(recetaId: Int) {
         _recetaId.value = recetaId
         viewModelScope.launch {
@@ -57,12 +52,8 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    /**
-     * Añade un ingrediente a la receta
-     */
     fun añadirIngrediente(ingredienteId: Int, cantidad: Double, unidad: String) {
         val recetaId = _recetaId.value ?: return
-
         viewModelScope.launch {
             val ingrediente = ingredienteDao.obtenerTodos().first()
                 .find { it.id == ingredienteId } ?: return@launch
@@ -73,46 +64,30 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
                 cantidad
             }
 
-            val relacion = RecetaIngrediente(
-                recetaId = recetaId,
-                ingredienteId = ingredienteId,
-                cantidadNecesaria = cantidadNormalizada
+            recetaDao.asociarIngrediente(
+                RecetaIngrediente(
+                    recetaId = recetaId,
+                    ingredienteId = ingredienteId,
+                    cantidadNecesaria = cantidadNormalizada
+                )
             )
-
-            recetaDao.asociarIngrediente(relacion)
         }
     }
 
-    /**
-     * Actualiza la cantidad de un ingrediente existente en la receta
-     */
-    fun actualizarCantidadIngrediente(
-        ingredienteId: Int,
-        nuevaCantidad: Double,
-        nuevaUnidad: String
-    ) {
-        val recetaId = _recetaId.value ?: return
-
+    fun actualizarCantidadIngrediente(ingredienteId: Int, nuevaCantidad: Double, nuevaUnidad: String) {
         viewModelScope.launch {
             eliminarIngrediente(ingredienteId)
             añadirIngrediente(ingredienteId, nuevaCantidad, nuevaUnidad)
         }
     }
 
-    /**
-     * Elimina un ingrediente de la receta
-     */
     fun eliminarIngrediente(ingredienteId: Int) {
         val recetaId = _recetaId.value ?: return
-
         viewModelScope.launch {
             recetaDao.desasociarIngrediente(recetaId, ingredienteId)
         }
     }
 
-    /**
-     * Actualiza el precio de venta de la receta
-     */
     fun actualizarPrecioVenta(receta: Receta, nuevoPrecio: Double) {
         viewModelScope.launch {
             val actualizada = receta.copy(precioVenta = nuevoPrecio)
@@ -122,9 +97,8 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
     }
 
     /**
-     * Descuenta ingredientes del inventario al preparar el plato.
-     * Usa CocinaManager.cocinar() que busca por ID y verifica stock antes de descontar.
-     * Si falta stock de cualquier ingrediente no descuenta nada.
+     * Descuenta los ingredientes del inventario al preparar [raciones] del plato.
+     * Si falta stock en cualquier ingrediente, no se descuenta nada (operación atómica).
      */
     fun prepararPlato(recetaId: Int, raciones: Int) {
         viewModelScope.launch {
@@ -137,13 +111,6 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun clearFeedback() {
-        _feedbackMessage.value = null
-    }
-
-    /**
-     * Actualiza las instrucciones de la receta
-     */
     fun actualizarInstrucciones(nuevasInstrucciones: String) {
         viewModelScope.launch {
             recetaActual?.let { receta ->
@@ -152,5 +119,9 @@ class RecetaDetailViewModel(application: Application) : AndroidViewModel(applica
                 recetaActual = actualizada
             }
         }
+    }
+
+    fun clearFeedback() {
+        _feedbackMessage.value = null
     }
 }

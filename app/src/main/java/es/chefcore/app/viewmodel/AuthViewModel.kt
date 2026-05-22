@@ -18,6 +18,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+/**
+ * ViewModel de autenticación.
+ * Gestiona el ciclo de registro, creación de PIN y login diario por PIN.
+ * El estado Firebase se mantiene entre sesiones; el PIN se valida contra Room.
+ */
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = FirebaseAuth.getInstance()
@@ -27,7 +32,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences("ChefCoreAuth", Context.MODE_PRIVATE)
 
-    // ── Estado de UI ─────────────────────────────────────────────────────────
+
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Loading)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
@@ -152,6 +157,18 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Guarda el PIN del gerente en Room y marca como creado en prefs
      */
+    // PIN e ID del usuario actualmente autenticado (en memoria, nunca persiste)
+    private var _currentUserPin: String = ""
+    private var _currentUserId:  Int    = 0
+
+    fun getCurrentUserId(): Int = _currentUserId
+
+    /** Comprobación síncrona del PIN actual — para validar en el diálogo sin esperar corrutina. */
+    fun checkCurrentPin(pin: String): Boolean = pin == _currentUserPin
+
+    private val _pinChangeResult = MutableStateFlow<String?>(null)
+    val pinChangeResult: StateFlow<String?> = _pinChangeResult.asStateFlow()
+
     fun guardarPin(pin: String) {
         viewModelScope.launch {
             val nombreGerente = prefs.getString("restaurante_nombre", "Gerente") ?: "Gerente"
@@ -163,10 +180,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             )
             usuarioDao.insertar(gerente)
 
-            // Marcar PIN como creado
-            prefs.edit().putBoolean("pin_creado", true).apply()
+            // Recuperar el ID generado por Room
+            val insertado = usuarioDao.obtenerTodos().first().find { it.pin == pin }
+            _currentUserId  = insertado?.id ?: 0
+            _currentUserPin = pin
             prefs.edit().putString("pin_gerente", pin).apply()
 
+            _currentUserPin = pin
             _uiState.value = AuthUiState.LoggedIn(rol = "Gerente")
             SyncManager.syncNow(getApplication())
         }
@@ -179,6 +199,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     fun validarPin(pin: String, usuarios: List<Usuario>) {
         val usuario = usuarios.find { it.pin == pin }
         if (usuario != null) {
+            _currentUserPin = pin
+            _currentUserId  = usuario.id
             _uiState.value = AuthUiState.LoggedIn(rol = usuario.rol)
             SyncManager.syncNow(getApplication())
         } else {
@@ -186,7 +208,58 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Cambia el PIN del usuario actualmente autenticado.
+     * Requiere confirmar el PIN actual antes de cambiarlo.
+     */
+    fun cambiarPin(pinActual: String, pinNuevo: String) {
+        viewModelScope.launch {
+            if (pinActual != _currentUserPin) {
+                _pinChangeResult.value = "error:El PIN actual no es correcto"
+                return@launch
+            }
+            if (pinNuevo.length != 4 || !pinNuevo.all { it.isDigit() }) {
+                _pinChangeResult.value = "error:El nuevo PIN debe tener exactamente 4 dígitos"
+                return@launch
+            }
+            if (pinNuevo == pinActual) {
+                _pinChangeResult.value = "error:El nuevo PIN debe ser diferente al actual"
+                return@launch
+            }
+
+            try {
+                val todos = usuarioDao.obtenerTodos().first()
+                // Verificar que el nuevo PIN no esté ya en uso por otro usuario
+                if (todos.any { it.pin == pinNuevo && it.pin != _currentUserPin }) {
+                    _pinChangeResult.value = "error:Ese PIN ya lo usa otro empleado"
+                    return@launch
+                }
+
+                val usuario = todos.find { it.pin == _currentUserPin }
+                    ?: run { _pinChangeResult.value = "error:Usuario no encontrado"; return@launch }
+
+                usuarioDao.actualizar(usuario.copy(pin = pinNuevo))
+                _currentUserPin = pinNuevo
+
+                // Si es el Gerente, actualizar también en prefs
+                if (usuario.rol == "Gerente") {
+                    prefs.edit().putString("pin_gerente", pinNuevo).apply()
+                }
+
+                _pinChangeResult.value = "ok:PIN actualizado correctamente"
+            } catch (e: Exception) {
+                _pinChangeResult.value = "error:Error al cambiar el PIN: ${e.message}"
+            }
+        }
+    }
+
+    fun clearPinChangeResult() { _pinChangeResult.value = null }
+
     fun cerrarSesion() {
+        // NO se desconecta de Firebase — la cuenta del restaurante se mantiene
+        // "Cerrar sesión" = volver a la pantalla de selección de perfil (cambio de turno)
+        _currentUserPin = ""
+        _currentUserId  = 0
         SyncManager.cancelAll(getApplication())
         _uiState.value = AuthUiState.NeedPinLogin
     }
@@ -201,11 +274,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     fun getFirebaseUser(): FirebaseUser? = auth.currentUser
 }
 
-// ── Estados posibles de la autenticación ────────────────────────────────────
+
 sealed class AuthUiState {
-    object Loading        : AuthUiState()
-    object NeedRegister   : AuthUiState()
-    object NeedCreatePin  : AuthUiState()
-    object NeedPinLogin   : AuthUiState()
+    object Loading        : AuthUiState()  // Comprobando estado inicial
+    object NeedRegister   : AuthUiState()  // Primera vez — ir a registro
+    object NeedCreatePin  : AuthUiState()  // Registrado pero sin PIN
+    object NeedPinLogin   : AuthUiState()  // Tiene cuenta — pedir PIN diario
     data class LoggedIn(val rol: String) : AuthUiState() // Autenticado
 }

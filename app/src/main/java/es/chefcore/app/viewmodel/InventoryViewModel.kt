@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 
+/**
+ * ViewModel del inventario de ingredientes.
+ * Delega en CocinaManager para el cálculo del PMP y la validación de unidades.
+ */
 class InventoryViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = ChefCoreDatabase.getDatabase(application)
@@ -40,7 +44,8 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
         nombre: String,
         cantidad: Double,
         unidad: String,
-        precioTotal: Double
+        precioTotal: Double,
+        imagenUri: String? = null
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -49,11 +54,23 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
                 nombre, cantidad, unidad, precioTotal
             )) {
                 is RegistroStockResult.NuevoIngrediente -> {
+                    // Si hay imagen, actualizar el ingrediente recién creado
+                    if (imagenUri != null) {
+                        ingredienteRepository.actualizar(
+                            resultado.ingrediente.copy(imagenUri = imagenUri)
+                        )
+                    }
                     _feedbackMessage.value = " Nuevo: ${resultado.ingrediente.nombre} " +
                             "(€${"%.2f".format(resultado.ingrediente.precio)}/${resultado.ingrediente.unidad})"
                 }
 
                 is RegistroStockResult.StockActualizado -> {
+                    // Si hay imagen, actualizar también el existente
+                    if (imagenUri != null) {
+                        ingredienteRepository.actualizar(
+                            resultado.ingrediente.copy(imagenUri = imagenUri)
+                        )
+                    }
                     val ing = resultado.ingrediente
                     _feedbackMessage.value = buildString {
                         append("➕ ${ing.nombre} actualizado\n")
@@ -70,6 +87,11 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
 
                 is RegistroStockResult.Error -> {
                     _feedbackMessage.value = " ${resultado.mensaje}"
+                }
+
+                is RegistroStockResult.PosibleDuplicado -> {
+                    // Desde inventario manual no deberia ocurrir, pero si pasa se trata como nuevo
+                    _feedbackMessage.value = " Fusionado con: ${resultado.candidato.nombre}"
                 }
             }
 

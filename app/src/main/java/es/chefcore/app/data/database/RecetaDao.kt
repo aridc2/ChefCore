@@ -34,6 +34,9 @@ interface RecetaDao {
     @Query("SELECT * FROM recetas WHERE nombre = :nombre LIMIT 1")
     suspend fun buscarPorNombre(nombre: String): Receta?
 
+    @Query("SELECT * FROM recetas WHERE LOWER(nombre) = LOWER(:nombre) LIMIT 1")
+    suspend fun buscarPorNombreIgnorandoCase(nombre: String): Receta?
+
     @Query("SELECT * FROM recetas WHERE nombre = :nombre LIMIT 1")
     fun observarPorNombre(nombre: String): Flow<Receta?>
 

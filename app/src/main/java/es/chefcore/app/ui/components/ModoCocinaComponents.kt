@@ -39,9 +39,9 @@ import es.chefcore.app.logic.UnitConverter
 import es.chefcore.app.ui.theme.ChefCoreColors
 import kotlinx.coroutines.delay
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // INPUT DE INSTRUCCIONES CON PASOS NUMERADOS
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 fun InstruccionesStepsInput(
@@ -140,9 +140,9 @@ fun InstruccionesStepsInput(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // HELPER — FORMATO DE TIEMPO
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 /** Formatea segundos a MM:SS o H:MM:SS */
 fun formatearTiempo(segundos: Int): String {
@@ -152,9 +152,9 @@ fun formatearTiempo(segundos: Int): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // WIDGET TEMPORIZADOR FLEXIBLE — selector directo de MM y SS
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 fun TimerWidget(modifier: Modifier = Modifier) {
@@ -205,7 +205,7 @@ fun TimerWidget(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         when {
-            // ── TERMINADO ────────────────────────────────────────────────
+            // TERMINADO
             terminado -> {
                 Text("✓  ¡Listo!", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 IconButton(
@@ -216,7 +216,7 @@ fun TimerWidget(modifier: Modifier = Modifier) {
                 }
             }
 
-            // ── CORRIENDO ────────────────────────────────────────────────
+            // CORRIENDO
             corriendo -> {
                 Text(
                     formatearTiempo(segundosRestantes),
@@ -245,7 +245,7 @@ fun TimerWidget(modifier: Modifier = Modifier) {
                 }
             }
 
-            // ── CONFIGURACIÓN / PAUSADO ───────────────────────────────────
+            // CONFIGURACIÓN / PAUSADO
             else -> {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -340,9 +340,9 @@ private fun TimeUnitSelector(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // PANEL DE INGREDIENTES CON RACIONES AJUSTADAS
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 fun PanelIngredientes(
@@ -406,9 +406,9 @@ fun PanelIngredientes(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // MODO COCINA — PANTALLA COMPLETA
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 /**
  * Pantalla de Modo Cocina — pantalla completa, oscura, letra gigante.
@@ -460,7 +460,7 @@ fun ModoCocinaScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
 
-            // ── CABECERA ─────────────────────────────────────────────────────
+            // CABECERA
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
@@ -508,7 +508,7 @@ fun ModoCocinaScreen(
                 }
             }
 
-            // ── TEXTO DEL PASO + TEMPORIZADOR ────────────────────────────────
+            // TEXTO DEL PASO + TEMPORIZADOR
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -545,7 +545,7 @@ fun ModoCocinaScreen(
                 }
             }
 
-            // ── BOTONES ANTERIOR / SIGUIENTE ─────────────────────────────────
+            // BOTONES ANTERIOR / SIGUIENTE
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)

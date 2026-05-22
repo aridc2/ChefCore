@@ -52,13 +52,16 @@ fun SettingsScreen(
     onPersonalClick: () -> Unit,
     onRecipesClick: () -> Unit,
     onScannerClick: () -> Unit,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onCambiarPin: (pinActual: String, pinNuevo: String) -> Unit = { _, _ -> },
+    onCheckCurrentPin: (String) -> Boolean = { false }
 ) {
     val currency by viewModel.currency.collectAsState()
     val ivaPercentage by viewModel.ivaPercentage.collectAsState()
     val cameraPermissionGranted by viewModel.cameraPermissionGranted.collectAsState()
 
     var showCurrencyDropdown by remember { mutableStateOf(false) }
+    var mostrarDialogoPin  by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -250,6 +253,7 @@ fun SettingsScreen(
                 }
             )
 
+            // Sincronización manual con Firestore — solo Gerente
             if (esGerente) {
                 SettingsSection(
                     title = "Nube",
@@ -336,6 +340,26 @@ fun SettingsScreen(
                 )
             }
 
+            // Cambiar PIN (todos los usuarios)
+            OutlinedButton(
+                onClick = { mostrarDialogoPin = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = ChefCoreColors.PrimaryGreen),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Cambiar PIN",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Cambiar mi PIN", style = MaterialTheme.typography.labelLarge)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Button(
                 onClick = onLogout,
                 modifier = Modifier
@@ -358,6 +382,18 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    // Diálogo cambio de PIN
+    if (mostrarDialogoPin) {
+        CambiarPinDialog(
+            onCheckCurrentPin = onCheckCurrentPin,
+            onDismiss = { mostrarDialogoPin = false },
+            onConfirm = { pinActual, pinNuevo ->
+                onCambiarPin(pinActual, pinNuevo)
+                mostrarDialogoPin = false
+            }
+        )
     }
 }
 
@@ -440,4 +476,96 @@ fun SettingRow(
         }
         content()
     }
+}
+
+@Composable
+private fun CambiarPinDialog(
+    onCheckCurrentPin: (String) -> Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (pinActual: String, pinNuevo: String) -> Unit
+) {
+    var pinActual  by remember { mutableStateOf("") }
+    var pinNuevo   by remember { mutableStateOf("") }
+    var pinConfirm by remember { mutableStateOf("") }
+    var error      by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cambiar PIN") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = pinActual,
+                    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pinActual = it; error = null } },
+                    label = { Text("PIN actual") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                    )
+                )
+                OutlinedTextField(
+                    value = pinNuevo,
+                    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pinNuevo = it; error = null } },
+                    label = { Text("Nuevo PIN") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                    )
+                )
+                OutlinedTextField(
+                    value = pinConfirm,
+                    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pinConfirm = it; error = null } },
+                    label = { Text("Confirmar nuevo PIN") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                    )
+                )
+                // Error inline — siempre visible dentro del diálogo
+                if (error != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                ChefCoreColors.ErrorRed.copy(alpha = 0.08f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(10.dp)
+                    ) {
+                        Icon(Icons.Default.Error, null,
+                            tint = ChefCoreColors.ErrorRed, modifier = Modifier.size(16.dp))
+                        Text(error!!, color = ChefCoreColors.ErrorRed,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    error = when {
+                        pinActual.isEmpty()          -> "Introduce tu PIN actual"
+                        !onCheckCurrentPin(pinActual)-> "El PIN actual no es correcto"
+                        pinNuevo.length != 4         -> "El nuevo PIN debe tener 4 dígitos"
+                        pinNuevo != pinConfirm        -> "Los PINs nuevos no coinciden"
+                        pinNuevo == pinActual         -> "El nuevo PIN debe ser diferente"
+                        else -> null
+                    }
+                    if (error == null) onConfirm(pinActual, pinNuevo)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = ChefCoreColors.PrimaryGreen)
+            ) { Text("Guardar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
 }

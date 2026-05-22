@@ -9,6 +9,10 @@ import es.chefcore.app.data.repository.UsuarioRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel de gestión de personal.
+ * Permite crear, editar y eliminar empleados y sus PINs de acceso.
+ */
 class PersonalManagementViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = ChefCoreDatabase.getDatabase(application)
@@ -70,7 +74,7 @@ class PersonalManagementViewModel(application: Application) : AndroidViewModel(a
     fun eliminarEmpleado(usuario: Usuario) {
         viewModelScope.launch {
             try {
-                // Solo un seguro de vida: evitar que el gerente principal se borre a sí mismo
+                // No se puede eliminar al último Gerente del sistema
                 if (usuario.rol == "Gerente" && usuarios.value.count { it.rol == "Gerente" } == 1) {
                     _errorMessage.value = "No puedes eliminar al único Gerente del sistema."
                     return@launch

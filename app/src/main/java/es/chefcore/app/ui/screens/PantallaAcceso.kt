@@ -55,7 +55,7 @@ fun PantallaAcceso(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Tabs ─────────────────────────────────────────────────────────
+            // Tabs
             TabRow(
                 selectedTabIndex = tabSeleccionada,
                 containerColor = Color.White,
@@ -85,7 +85,7 @@ fun PantallaAcceso(
                 }
             }
 
-            // ── Contenido según tab ───────────────────────────────────────────
+            // Contenido según tab
             when (tabSeleccionada) {
                 0 -> ContenidoLogin(
                     viewModel = viewModel,
@@ -98,9 +98,9 @@ fun PantallaAcceso(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // TAB 0 — LOGIN CON PIN
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 private fun ContenidoLogin(
@@ -234,9 +234,9 @@ private fun ContenidoLogin(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // TAB 1 — REGISTRO DE RESTAURANTE
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Composable
 private fun ContenidoRegistro(viewModel: AuthViewModel) {

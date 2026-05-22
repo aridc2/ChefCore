@@ -3,6 +3,7 @@ package es.chefcore.app.logic
 import es.chefcore.app.data.database.Ingrediente
 import es.chefcore.app.data.database.IngredienteDao
 import es.chefcore.app.data.database.RecetaDao
+import kotlinx.coroutines.flow.first
 
 class CocinaManager(
     private val iDao: IngredienteDao,
@@ -34,6 +35,39 @@ class CocinaManager(
         }
 
         return true
+    }
+
+    // Similitud de nombres (Levenshtein normalizado) ────────────────────────
+
+    private fun levenshtein(a: String, b: String): Int {
+        val dp = Array(a.length + 1) { IntArray(b.length + 1) }
+        for (i in 0..a.length) dp[i][0] = i
+        for (j in 0..b.length) dp[0][j] = j
+        for (i in 1..a.length) for (j in 1..b.length) {
+            dp[i][j] = if (a[i - 1] == b[j - 1]) dp[i - 1][j - 1]
+            else 1 + minOf(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+        }
+        return dp[a.length][b.length]
+    }
+
+    fun similitud(a: String, b: String): Double {
+        val maxLen = maxOf(a.length, b.length)
+        if (maxLen == 0) return 1.0
+        return 1.0 - levenshtein(a.lowercase(), b.lowercase()).toDouble() / maxLen
+    }
+
+    /**
+     * Busca el ingrediente existente mas similar al nombre dado.
+     * Devuelve el par (ingrediente, similitud) si supera el umbral, o null.
+     * Umbral recomendado: 0.82 — captura "IFA-ELIGES" vs "IFA-ELIGEN" (1 letra en 16 = 0.9375)
+     * sin confundir productos distintos como "QUESO GRANA PADANO" vs "QUESO ROQUEFORT".
+     */
+    suspend fun buscarSimilar(nombre: String, umbral: Double = 0.82): Pair<Ingrediente, Double>? {
+        val todos: List<Ingrediente> = iDao.obtenerTodos().first()
+        return todos
+            .map { ing -> ing to similitud(nombre, ing.nombre) }
+            .filter { (_, sim) -> sim >= umbral }
+            .maxByOrNull { (_, sim) -> sim }
     }
 
     /**
@@ -101,7 +135,16 @@ class CocinaManager(
             )
 
         } else {
-            // ========== CASO 2: INGREDIENTE NUEVO ==========
+            // ========== CASO 2: SIN COINCIDENCIA EXACTA ==========
+            // Comprobar si hay un nombre muy similar → fusionar automaticamente
+            val similar = buscarSimilar(nombreLimpio)
+            if (similar != null) {
+                val (candidato, _) = similar
+                // Reutilizar el ingrediente existente con su nombre correcto
+                return registrarEntradaStock(candidato.nombre, cantidad, unidad, precioTotal)
+            }
+
+            // ========== CASO 3: INGREDIENTE REALMENTE NUEVO ==========
 
             // Normalizar a unidad base
             val unidadBase = UnitConverter.obtenerUnidadBase(unidad)
@@ -154,21 +197,11 @@ class CocinaManager(
     }
 
 
-    @Deprecated(
-        message = "Usa calcularRentabilidad() que retorna RentabilidadReceta",
-        replaceWith = ReplaceWith("calcularRentabilidad(recetaId, precioVenta)")
-    )
-    suspend fun calcularRentabilidadString(recetaId: Int, precioVenta: Double): String {
-        val rentabilidad = calcularRentabilidad(recetaId, precioVenta)
-        return "Coste: ${"%.2f".format(rentabilidad.coste)}€ | " +
-                "Beneficio: ${"%.2f".format(rentabilidad.margen)}€ " +
-                "(${"%.2f".format(rentabilidad.porcentajeMargen)}%)"
-    }
+
 }
 
-// ============================================================================
+
 // DATA CLASSES DE RESULTADO
-// ============================================================================
 
 /**
  * Resultado de registrar entrada de stock
@@ -196,6 +229,16 @@ sealed class RegistroStockResult {
         val ingredienteExistente: Ingrediente,
         val unidadIntentada: String,
         val mensaje: String
+    ) : RegistroStockResult()
+
+    /**
+     * Nombre muy similar a un ingrediente existente — pedir confirmacion al usuario.
+     * El caller decide si usar el nombre existente o crear uno nuevo.
+     */
+    data class PosibleDuplicado(
+        val nombreOcr: String,
+        val candidato: Ingrediente,
+        val similitud: Double
     ) : RegistroStockResult()
 
     /**

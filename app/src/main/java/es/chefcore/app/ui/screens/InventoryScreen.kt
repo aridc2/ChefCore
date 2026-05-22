@@ -27,16 +27,29 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.chefcore.app.data.database.Ingrediente
 import es.chefcore.app.logic.UnitConverter
 import es.chefcore.app.ui.components.ConfirmDeleteDialog
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import es.chefcore.app.ui.components.EditarIngredienteDialog
 import es.chefcore.app.ui.components.IngredienteItemConAcciones
+import es.chefcore.app.ui.components.IngredientImageUploadPicker
 import es.chefcore.app.ui.components.Sidebar
 import es.chefcore.app.ui.theme.ChefCoreColors
 import es.chefcore.app.viewmodel.InventoryViewModel
+import android.net.Uri
+import android.content.Intent
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import es.chefcore.app.viewmodel.VoiceViewModel
 
 
 @Composable
 fun InventoryScreen(
     viewModel: InventoryViewModel = viewModel(),
+    voiceViewModel: VoiceViewModel = viewModel(),
     esGerente: Boolean = true,
     onSettingsClick: () -> Unit,
     onRecipesClick: () -> Unit,
@@ -55,13 +68,57 @@ fun InventoryScreen(
     var isListening by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
 
+    // SpeechRecognizer setup
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
+    val speechIntent = remember {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES")
+            putExtra("android.speech.extra.PREFER_OFFLINE", true)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+    }
+    DisposableEffect(Unit) {
+        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(p: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(v: Float) {}
+            override fun onBufferReceived(b: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onPartialResults(r: Bundle?) {
+                recognizedText = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+            }
+            override fun onResults(r: Bundle?) {
+                val texto = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                if (texto.isNotBlank()) {
+                    recognizedText = texto
+                    voiceViewModel.procesarVoz(texto)
+                }
+                isListening = false
+            }
+            override fun onError(err: Int) { isListening = false; recognizedText = "" }
+            override fun onEvent(t: Int, p: Bundle?) {}
+        })
+        onDispose { speechRecognizer.destroy() }
+    }
     val micPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) isListening = true
+        if (isGranted) {
+            recognizedText = ""
+            isListening = true
+            speechRecognizer.startListening(speechIntent)
+        }
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    // Feedback de voz en Snackbar
+    val voceFeedback by voiceViewModel.feedback.collectAsStateWithLifecycle()
+    LaunchedEffect(voceFeedback) {
+        voceFeedback?.let { snackbarHostState.showSnackbar(it); voiceViewModel.clearFeedback() }
+    }
 
     LaunchedEffect(feedbackMessage) {
         feedbackMessage?.let {
@@ -117,9 +174,19 @@ fun InventoryScreen(
                     FilledTonalIconButton(
                         onClick = {
                             if (isListening) {
+                                speechRecognizer.cancel()
                                 isListening = false
                             } else {
-                                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                val yaPermitido = androidx.core.content.ContextCompat.checkSelfPermission(
+                                    context, Manifest.permission.RECORD_AUDIO
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (yaPermitido) {
+                                    recognizedText = ""
+                                    isListening = true
+                                    speechRecognizer.startListening(speechIntent)
+                                } else {
+                                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
                             }
                         },
                         modifier = Modifier.size(72.dp),
@@ -212,8 +279,8 @@ fun InventoryScreen(
         AñadirStockDialog(
             esGerente = esGerente,
             onDismiss = { mostrarDialogoAñadir = false },
-            onConfirm = { nombre, cantidad, unidad, precio ->
-                viewModel.añadirStock(nombre, cantidad, unidad, precio)
+            onConfirm = { nombre, cantidad, unidad, precio, imagenUri ->
+                viewModel.añadirStock(nombre, cantidad, unidad, precio, imagenUri)
                 mostrarDialogoAñadir = false
             }
         )
@@ -244,43 +311,51 @@ fun InventoryScreen(
 }
 
 /**
- * Diálogo para añadir stock
+ * Diálogo para añadir stock — con foto, precio claro y teclado que no cierra el modal.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AñadirStockDialog(
     esGerente: Boolean = true,
     onDismiss: () -> Unit,
-    onConfirm: (nombre: String, cantidad: Double, unidad: String, precio: Double) -> Unit
+    onConfirm: (nombre: String, cantidad: Double, unidad: String, precio: Double, imagenUri: String?) -> Unit
 ) {
-    var nombre by remember { mutableStateOf("") }
-    var cantidad by remember { mutableStateOf("") }
-    var unidad by remember { mutableStateOf("kg") }
-    var precio by remember { mutableStateOf("") }
+    var nombre    by remember { mutableStateOf("") }
+    var cantidad  by remember { mutableStateOf("") }
+    var unidad    by remember { mutableStateOf("kg") }
+    var precio    by remember { mutableStateOf("") }
+    var imagenUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var expandedUnidad by remember { mutableStateOf(false) }
 
     val unidades = listOf("kg", "g", "L", "ml", "cl", "ud")
 
+    val cantidadD = cantidad.replace(",", ".").toDoubleOrNull()
+    val precioD   = precio.replace(",", ".").toDoubleOrNull()
+
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(dismissOnClickOutside = false),
         title = { Text("Añadir Stock") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IngredientImageUploadPicker(
+                    imageUri = imagenUri,
+                    onImageSelected = { imagenUri = it }
+                )
                 OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
+                    value = nombre, onValueChange = { nombre = it },
                     label = { Text("Nombre del ingrediente") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = cantidad,
-                        onValueChange = { cantidad = it },
+                        value = cantidad, onValueChange = { cantidad = it },
                         label = { Text("Cantidad") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)
                     )
                     ExposedDropdownMenuBox(
                         expanded = expandedUnidad,
@@ -288,55 +363,45 @@ private fun AñadirStockDialog(
                         modifier = Modifier.weight(1f)
                     ) {
                         OutlinedTextField(
-                            value = unidad,
-                            onValueChange = {},
-                            readOnly = true,
+                            value = unidad, onValueChange = {}, readOnly = true,
                             label = { Text("Unidad") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUnidad) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
-                        ExposedDropdownMenu(
-                            expanded = expandedUnidad,
-                            onDismissRequest = { expandedUnidad = false }
-                        ) {
+                        ExposedDropdownMenu(expanded = expandedUnidad, onDismissRequest = { expandedUnidad = false }) {
                             unidades.forEach { u ->
-                                DropdownMenuItem(
-                                    text = { Text(u) },
-                                    onClick = { unidad = u; expandedUnidad = false }
-                                )
+                                DropdownMenuItem(text = { Text(u) }, onClick = { unidad = u; expandedUnidad = false })
                             }
                         }
                     }
                 }
                 OutlinedTextField(
-                    value = precio,
-                    onValueChange = { precio = it },
-                    label = { Text("Precio total (€)") },
+                    value = precio, onValueChange = { precio = it },
+                    label = { Text("Precio total de la compra (€)") },
+                    placeholder = { Text("Lo que pagaste en total") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
                 )
+                if (cantidadD != null && cantidadD > 0 && precioD != null && precioD > 0) {
+                    Text(
+                        "→ ${"%.4f".format(precioD / cantidadD)} €/$unidad (precio unitario calculado)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ChefCoreColors.PrimaryGreen
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (nombre.isNotBlank()) {
-                        val cant = cantidad.replace(",", ".").toDoubleOrNull() ?: 0.0
-                        val prec = precio.replace(",", ".").toDoubleOrNull() ?: 0.0
-                        onConfirm(nombre, cant, unidad, prec)
+                        onConfirm(nombre, cantidadD ?: 0.0, unidad, precioD ?: 0.0, imagenUri?.toString())
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = ChefCoreColors.PrimaryGreen)
-            ) {
-                Text("Añadir")
-            }
+            ) { Text("Añadir") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }

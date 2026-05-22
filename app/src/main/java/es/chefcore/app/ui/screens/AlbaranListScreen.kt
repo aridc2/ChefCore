@@ -34,6 +34,8 @@ fun AlbaranListScreen(
     viewModel: AlbaranViewModel = viewModel()
 ) {
     val albaranes by viewModel.albaranes.collectAsStateWithLifecycle()
+    val usuarios  by viewModel.usuarios.collectAsStateWithLifecycle()
+
     var albaranAEliminar by remember { mutableStateOf<Albaran?>(null) }
 
     Row(
@@ -112,7 +114,7 @@ fun AlbaranListScreen(
                     items(albaranes) { albaran ->
                         AlbaranCard(
                             albaran = albaran,
-                            nombreUsuario = viewModel.nombreDeUsuario(albaran.idUsuario),
+                            nombreUsuario = usuarios.find { it.id == albaran.idUsuario }?.nombre ?: "Desconocido",
                             esGerente = esGerente,
                             onDelete = { albaranAEliminar = albaran }
                         )
