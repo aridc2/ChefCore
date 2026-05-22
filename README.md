@@ -36,3 +36,30 @@ Por motivos de seguridad, el archivo `google-services.json` de Firebase ha sido 
 | Google ML Kit | OCR de albaranes |
 | Android SpeechRecognizer | Voz offline |
 | WorkManager | Sincronización en segundo plano |
+
+## 4. Manual Técnico
+
+### Requisitos del entorno de desarrollo
+- Android Studio Hedgehog 2023.1.1 o superior
+- JDK 17
+- Kotlin 2.0
+- Gradle 8.x
+
+### Configuración de Firebase
+1. Crear proyecto en [Firebase Console](https://console.firebase.google.com)
+2. Registrar app Android con package name `es.chefcore.app`
+3. Descargar `google-services.json` y colocarlo en `/app`
+4. Habilitar **Authentication** con proveedor Email/Password
+5. Crear base de datos **Firestore** en modo producción
+
+### Extender el parser OCR a un nuevo proveedor
+1. Añadir el nuevo valor en el enum `TipoAlbaran` en `AlbaranOcrParser.kt`
+2. Añadir su palabra clave en `detectarTipo()`
+3. Implementar la función `parseNuevoProveedor()` siguiendo el patrón de `parseSercodi()`
+4. Añadirlo al `when` dentro de `extraerItems()`
+
+### Extender el sistema de voz con nuevos comandos
+1. Abrir `VoiceCommander.kt`
+2. Añadir una nueva rama `when` con la palabra clave del comando
+3. Implementar la lógica usando los DAOs disponibles (`iDao`, `rDao`)
+4. Si el comando necesita parsear texto, añadir el patrón en `VoiceParser.kt`
