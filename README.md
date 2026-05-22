@@ -3,7 +3,7 @@
 ## 1. Despliegue y Pruebas (Instalación Rápida)
 Para facilitar la evaluación por parte del tribunal, la aplicación ha sido compilada y desplegada en formato APK.
 
-* **Descarga directa del instalable:** [⬇️ Descargar ChefCore.apk](https://github.com/aridc2/ChefCore/blob/main/releases/chefcore.apk?raw=true)
+* **Descarga directa del instalable:** [⬇️ Descargar ChefCore.apk](https://github.com/aridc2/ChefCore/blob/master/releases/chefcore.apk?raw=true)
 * **Requisitos mínimos:** Android 8.0 o superior.
 
 ### Credenciales de Acceso para el Tribunal
