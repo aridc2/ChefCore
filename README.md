@@ -15,16 +15,16 @@ Para facilitar la evaluación por parte del tribunal, la aplicación ha sido com
 
 El código fuente completo se encuentra en la carpeta `/app`. La estructura principal es:
 
+```
 app/src/main/java/es/chefcore/app/
-├── data/           # Entidades Room, DAOs y repositorios
-├── logic/          # Parser OCR, gestión de voz, CocinaManager (PMP)
-├── ui/             # Pantallas y componentes Jetpack Compose
-├── viewmodel/      # 9 ViewModels (patrón MVVM)
-└── workers/        # Sincronización Firebase en segundo plano
+├── data/        # Entidades Room, DAOs y repositorios
+├── logic/       # Parser OCR, gestión de voz, CocinaManager (PMP)
+├── ui/          # Pantallas y componentes Jetpack Compose
+├── viewmodel/   # 9 ViewModels (patrón MVVM)
+└── workers/     # Sincronización Firebase en segundo plano
+```
 
-Por motivos de seguridad, el archivo `google-services.json` de Firebase ha sido excluido del repositorio mediante `.gitignore`. Para compilar desde código fuente es necesario añadir este fichero en `app/` con una configuración propia de Firebase.
-
----
+Por motivos de seguridad, el archivo `google-services.json` de Firebase ha sido excluido...
 
 ## 3. Stack tecnológico
 
